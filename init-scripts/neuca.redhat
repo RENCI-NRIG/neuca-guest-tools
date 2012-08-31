@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# neuca      Boot-time guest VM configuration based on EC2/Eucalyptus instance user data
+#
+# chkconfig: 2345 90 80
+# description: neuca
+#
+# processname: neuca
+#
+# By: Ilia Baldine - ibaldin@renci.org
+#
+# Based on freshclam init by:
+# (c) 2004/05/17 Petr@Kristof.CZ under GNU GPL 2.0+
+#
+
+# Source function library
+. /etc/init.d/functions
+
+# Get network config
+. /etc/sysconfig/network
+
+RETVAL=0
+NEUCA=/usr/local/bin/neuca
+NEUCASCRIPT=/etc/neuca/user-script
+NEUCA_NETCONF=$NEUCA-netconf
+NEUCA_USER_SCRIPT=$NEUCA-user-script
+NEUCALOCK=/var/lock/subsys/neuca
+
+# Exit if the package is not installed
+[ -x "$NEUCA" ] || exit 0
+
+
+start() {
+    [ -f $NEUCALOCK ] && exit 1
+
+    # try for a minute
+    count=60
+    RETVAL=1
+    while [ "$RETVAL" != "0" -a $count -gt 1 ]; do
+            logger "NEuca trying to configure host $count"
+            $NEUCA_NETCONF
+            RETVAL="$?"
+            sleep 1
+            count=`expr $count - 1`
+    done
+    touch $NEUCALOCK
+
+    # save user script into /etc/neuca and run it
+    if [ "$RETVAL" == "0" ]; then
+            $NEUCA_USER_SCRIPT > $NEUCASCRIPT
+	    chmod ug+x $NEUCASCRIPT
+    fi
+
+    echo
+    return $RETVAL
+}
+
+stop() {
+    RETVAL=0
+    return $RETVAL
+}    
+
+restart() {
+      stop
+    start
+}    
+
+reload() {
+    stop
+    start
+}
+
+case "$1" in
+  start)
+      start
+      case "$?" in
+              0) logger "NEuca successfully configured" && /etc/init.d/network restart && $NEUCASCRIPT ;;
+	      1) logger "NEuca ran already" ;;
+              2) logger "NEuca error processing user data" ;;
+      esac
+    ;;
+  stop)
+      stop
+    ;;
+  restart)
+      restart
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}" 
+    exit 1
+esac
+
+exit $?
