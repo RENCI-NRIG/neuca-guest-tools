@@ -1,0 +1,3 @@
+* Fri Sep 24 2010
+	 * Initial set of scripts that parse the .ini user-data of the guest instance
+and (a) configure network interfaces and (b) execute the post boot script 

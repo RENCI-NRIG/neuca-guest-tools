@@ -1,0 +1,2 @@
+This directory contains examples of NEuca .ini-formatted user-data that creates VMs with multiple 
+pre-configured interfaces and some post-boot user-specified actions.

@@ -1,0 +1,20 @@
+This software is installed into images for guest VMs that are instantiated by 
+Eucalyptus with NEuca patches. Images can be RedHat (or derivatives like Fedora
+and Centos) or Debian/Ubuntu.
+
+Typical installation involves mounting an existing VM image as a loopback device and
+performing chroot into it to perform the installation.
+
+Prerequisites: python-2.6, python-ipaddr, python-boto and make
+
+To install, simply say 'make install' as root. The software does its best to guess
+the Linux distribution that is on the image and installs appropriate startup scripts
+to be executed at boot time. To uninstall, say 'make uninstall'. 
+
+After the image boots you can also use the following tools from command line:
+ * neuca-user-data - retrieve the entire user-data passed to this instance
+ * neuca-user-script - retrieve the custom post-boot script (executed as S99 for the
+appropriate runlevel)
+ * neuca-distro - tells you the best guess of the distribution you are running.
+
+For more information visit https://geni-orca.renci.org
