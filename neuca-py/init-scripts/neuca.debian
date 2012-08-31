@@ -11,26 +11,22 @@
 ### END INIT INFO
 
 # Author: Ilia Baldine <ibaldin@renci.org>
+# Author: Paul Ruth <pruth@renci.org>
 #
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="NEuca post-boot configuration script"
 NAME=neuca
-PIDFILE=/var/run/$NAME.pid
-SCRIPTNAME=/etc/init.d/$NAME
-NEUCASCRIPT=/etc/neuca/user-script
-NEUCA=/usr/local/bin/neuca
-NEUCA_NETCONF=$NEUCA-netconf
-NEUCA_USER_SCRIPT=$NEUCA-user-script
 
-# Exit if the package is not installed
-[ -x "$NEUCA" ] || exit 0
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
+
+# Exit if the package is not installed
+[ -x "$NEUCA" ] || exit 0
 
 # Define LSB log_* functions.
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
@@ -39,54 +35,48 @@ NEUCA_USER_SCRIPT=$NEUCA-user-script
 #
 # Function that starts the daemon/service
 #
+check_privsep_dir() {
+    # Create the PrivSep empty dir if necessary
+    if [ ! -d /var/run/neuca ]; then
+	mkdir /var/run/neuca
+	chmod 0755 /var/run/neuca
+    fi
+
+    if [ ! -d /var/log/neuca ]; then
+        mkdir /var/log/neuca
+        chmod 0755 /var/log/neuca
+    fi
+}
+
 do_start()
 {
-	# Return
-	#   0 if daemon has been started
-	#   1 if daemon was already running
-	#   2 if daemon could not be started
-	
-	RETVAL="1"
-	[ -f $PIDFILE ] && return "$RETVAL"
-
-	# try for a minute
-	count=60
-	while [ "$RETVAL" != "0" -a $count -gt 1 ]; do
-		logger "NEuca trying to configure host $count"
-		$NEUCA_NETCONF
-		RETVAL="$?"
-		sleep 1
-		count=`expr $count - 1`
-	done
-	touch $PIDFILE
-
-	# save user script into /etc/neuca and run it
-	if [ "$RETVAL" = "0" ]; then
-		$NEUCA_USER_SCRIPT > $NEUCASCRIPT
-		chmod ug+x $NEUCASCRIPT
-	fi
-
-	return "$RETVAL"
+    check_privsep_dir
+    
+    /usr/local/bin/neucad start
 }
+
+
+do_stop()
+{
+    /usr/local/bin/neucad stop
+}
+
 
 case "$1" in
   start)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
 	do_start
-	case "$?" in
-		0) logger "NEuca ran successfully" && /etc/init.d/networking restart && $NEUCASCRIPT && [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		1) logger "NEuca already ran" && [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-		2) logger "NEuca unable to configure host" && [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
 	;;
   stop)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	do_stop
 	;;
   restart|force-reload)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Re-starting $DESC" "$NAME"
+	do_stop
+	do_start	
 	;;
   *)
-	#echo "Usage: $SCRIPTNAME {start|stop|restart|reload|force-reload}" >&2
 	echo "Usage: $SCRIPTNAME {start|stop|restart}" >&2
 	exit 3
 	;;
