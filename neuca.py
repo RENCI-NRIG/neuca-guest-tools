@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # 
-# Copyright (c) 2010 Renaissance Computing Institute except where noted. All rights reserved.
+# Copyright (c) 2010 Renaissance Computing Institute. All rights reserved.
 # 
 # This software is released under GPLv2
 # 
@@ -31,7 +31,6 @@ import platform
 based on EC2 user-data passed to the instance """
 
 class TempFile(file):
-    """Copyright (c) 2010 Alon Swartz <alon@turnkeylinux.org> - all rights reserved"""
     def __init__(self, prefix='tmp', suffix=''):
         fd, path = tempfile.mkstemp(suffix, prefix)
         os.close(fd)
@@ -143,7 +142,6 @@ class NEucaDebianCustomizer(NEucaOSCustomizer):
         
 
 class NEucaRedhatCustomizer(NEucaOSCustomizer):
-    networkConfigurationFile="/etc/sysconfig/network"
     networkConfigurationStub="/etc/sysconfig/network-scripts/ifcfg-"
     
     def __init__(self, distro):
@@ -162,12 +160,6 @@ class NEucaRedhatCustomizer(NEucaOSCustomizer):
         super(NEucaRedhatCustomizer, self).customizeNetworking()
 
         print >> sys.stderr, "NEuca performing RedHat networking configuration"
-	# turn off zeroconf so 169.254.x.x/16 route doesn't move
-	# blocking access to cloud
-	fh = open(self.networkConfigurationFile, 'a')
-	fh.write('NOZEROCONF=yes\n')
-	fh.close()
-	# create interface definitions
         i = 1
         while(True):
             ifName = 'eth%d' % i
@@ -214,7 +206,6 @@ def main():
         "Ubuntu": NEucaDebianCustomizer,
         "redhat": NEucaRedhatCustomizer,
         "fedora": NEucaRedhatCustomizer,
-	"centos": NeucaRedhatCustomizer,
     }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
 
     if invokeName == "neuca-netconf":
