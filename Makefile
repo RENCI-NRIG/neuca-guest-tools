@@ -4,7 +4,7 @@ INSTALL=/usr/bin/install
 NEUCA=$(NEUCA_PREFIX)/usr/local/bin/neuca
 NEUCA_INIT=$(NEUCA_PREFIX)/etc/init.d/neuca
 
-.PHONY: default install uninstall install-neuca uninstall-neuca install-debian-init-script install-redhat-init-script uninstall-debian install-Ubuntu-init-script uninstall-Ubuntu-init-script install-fedora-init-script uninstall-fedora-init-script install-centos-init-script uninstall-centos-init-script
+.PHONY: default install uninstall install-neuca uninstall-neuca install-debian-init-script install-redhat-init-script uninstall-debian install-Ubuntu-init-script uninstall-Ubuntu-init-script install-fedora-init-script uninstall-fedora-init-script
 
 default: install
 
@@ -30,8 +30,6 @@ install-debian-init-script: $(NEUCA)
 	$(INSTALL) init-scripts/neuca.debian $(NEUCA_INIT)
 	update-rc.d neuca start 99 2 3 4 5 .
 
-install-centos-init-script: install-redhat-init-script
-
 install-fedora-init-script: install-redhat-init-script
 
 install-redhat-init-script:
@@ -49,8 +47,6 @@ uninstall-Ubuntu-init-script: uninstall-debian-init-script
 uninstall-debian-init-script:
 	rm -f $(NEUCA_INIT)
 	update-rc.d neuca remove
-
-uninstall-centos-init-script: uninstall-redhat-init-script
 
 uninstall-fedora-init-script: uninstall-redhat-init-script
 

@@ -48,7 +48,6 @@ start() {
     # save user script into /etc/neuca and run it
     if [ "$RETVAL" == "0" ]; then
             $NEUCA_USER_SCRIPT > $NEUCASCRIPT
-	    chmod ug+x $NEUCASCRIPT
     fi
 
     echo
@@ -74,7 +73,7 @@ case "$1" in
   start)
       start
       case "$?" in
-              0) logger "NEuca successfully configured" && /etc/init.d/network restart && $NEUCASCRIPT ;;
+              0) logger "NEuca successfully configured" && /etc/init.d/network restart && sh $NEUCASCRIPT ;;
 	      1) logger "NEuca ran already" ;;
               2) logger "NEuca error processing user data" ;;
       esac

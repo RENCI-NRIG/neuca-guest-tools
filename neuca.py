@@ -214,7 +214,6 @@ def main():
         "Ubuntu": NEucaDebianCustomizer,
         "redhat": NEucaRedhatCustomizer,
         "fedora": NEucaRedhatCustomizer,
-	"centos": NeucaRedhatCustomizer,
     }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
 
     if invokeName == "neuca-netconf":
