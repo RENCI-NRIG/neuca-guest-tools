@@ -596,12 +596,12 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             cmd = [ str(executable), "--mode", "discovery", "--type", "sendtargets", "--portal", str(ip) ]
             rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
-                LOG.error('rtncode: ' + str(rtncode) + 'Failed to discover iSCSI targets for device (' + str(device) + ' with command: ' + str(cmd))
+                LOG.error('rtncode: ' + str(rtncode) + 'Failed to discover iSCSI targets with command: ' + str(cmd))
                 return None
 
             LOG.debug('Targets: ' + str(data_stdout))
         except Exception as e:
-            LOG.error('Exception: Failed to discover iSCSI targets for device (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            LOG.error('Exception: Failed to discover iSCSI targets for device with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return None
 	
 	lines = data_stdout.split('\n')
@@ -618,7 +618,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 	return None
 
     def __updateISCSI_attach(self, device, target, ip, port, chap_user, chap_pass):
-        LOG.debug('__updateISCSI_attach(self, '+device+', ' + target  + ', ' + ip + ', ' + port +')')
+        LOG.debug('__updateISCSI_target_login(self, '+ str(device) +', ' + str(target)  + ', ' + str(ip)  + ', ' + str(port) +')')
         import os
         args = ''
         command = 'iscsiadm'
@@ -635,11 +635,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             LOG.error('iSCSI executable iscsiadm does not exist in paths ., /bin, or /usr/bin')
             return
 
-        #Attach the device is it is not already attached
+                #Attach the device is it is not already attached                                                                                                                                                                                                                            
         if not os.path.exists(device):
-            #iSCSI device not attached
-            
-            #set authmethod : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.authmethod --value=CHAP
+            #iSCSI device not attached                                                                                                                                                                                                                                              
+
+            #set authmethod : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.authmethod --value=CHAP                                                                                                                    
             try:
                 cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.authmethod", "--value=CHAP" ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
@@ -649,8 +649,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             except Exception as e:
                 LOG.error('Exception: Failed to set iSCSI authmethod device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
-                
-            #set chap username : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.username --value=username
+
+            #set chap username : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.username --value=username                                                                                                               
             try:
                 cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.username", "--value="+str(chap_user) ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
@@ -660,8 +660,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             except Exception as e:
                 LOG.error('Exception: Failed to set iSCSI chap user for device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
-                
-            #set chap password : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.password --value=password
+
+            #set chap password : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.password --value=password                                                                                                               
             try:
                 cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.password", "--value="+str(chap_pass) ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
@@ -672,17 +672,18 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 LOG.error('Exception: Failed to set iSCSI chap pass device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
 
-            #attach target: iscsiadm --mode node --targetname target0  --portal 172.16.101.43:3260   --login 
+            #attach target: iscsiadm --mode node --targetname target0  --portal 172.16.101.43:3260   --login                                                                                                                                                                        
             try:
                 cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), '--login' ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
                 if rtncode != 0:
-                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to attach iSCSI target for device (' + str(device) + ' with command: ' + str(cmd))
-                    return
-                LOG.debug('Attach stdout: ' +str(data_stdout))
+                    LOG.warning('rtncode: ' + str(rtncode) + 'Failed to attach iSCSI target for device (' + str(device) + ' with command: ' + str(cmd))
+                    self.__updateISCSI_target_rescan(device, target, ip, port)
+                else:
+                    LOG.debug('Attach stdout: ' +str(data_stdout))
             except Exception as e:
                 LOG.error('Failed to connect iSCSI device (' + str(device) + ' with command: ' + str(cmd))
-                return
+                self.__updateISCSI_target_rescan(device, target, ip, port)
         else:
             LOG.debug('Device already connected: ' + str(device))
             return
@@ -695,7 +696,57 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             if count > 10:
                 break
             time.sleep(1)
+
+    def __updateISCSI_target_rescan(self, device, target, ip, port):
+        LOG.debug('__updateISCSI_target_rescan(self, ' + str(device) +', ' + str(target)  + ')')
+        import os
+        args = ''
+        command = 'iscsiadm'
+        exeExists=False
+        for dir in ['', '/bin/', '/usr/bin']:
+            executable = os.path.join(dir, command)
+            if not os.path.exists(executable):
+                continue
+            else:
+                exeExists=True
+                break
+
+        if not exeExists:
+            LOG.error('iSCSI executable iscsiadm does not exist in paths ., /bin, or /usr/bin')
+            return
+
+        #iscsiadm -m discovery -t st -p 10.104.0.2 -o delete -o new
+        try:
+            cmd = [ str(executable), "-m", "discovery", "-t", "st", "--portal", str(ip)+":"+str(port), "-o", "delete", "-o", "new" ]
+            rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
+            if rtncode != 0:
+                LOG.error('rtncode: ' + str(rtncode) + 'Failed re-discovery with command: ' + str(cmd))
+                return
+        except Exception as e:
+            LOG.error('Exception: Failed re-discovery with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            return
+         
+        #iscsiadm -m session --rescan          
+        try:
+            cmd = [ str(executable), "--mode", "session", "--rescan" ]
+            rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
+            if rtncode != 0:
+                LOG.error('rtncode: ' + str(rtncode) + 'Failed to rescan with command: ' + str(cmd))
+                return
+        except Exception as e:
+            LOG.error('Exception: Failed to rescan with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            return
+
+        LOG.debug('Checking device attached: ' + str(device))
+        count = 0
+        while not os.path.exists(device):
+            LOG.debug('Device not attached: ' + str(device) + ', try ' + str(count))
+            count = count + 1
+            if count > 10:
+                break
+            time.sleep(1)
         
+
     def __updateISCSI_format(self, device, fs_type, fs_options):
         LOG.debug('__updateISCSI_format(self, '+device+', ' + fs_type  + ', ' + fs_options + ')')
         import os
@@ -964,7 +1015,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
                     if shouldAttach.lower() == 'yes':
                         LOG.debug("attaching lun")
-                        self.__updateISCSI_attach(device, target, ip, port, chap_user, chap_pass)
+                        if not os.path.exists(device):
+                            #self.__updateISCSI_target_rescan(device, target, ip, port)
+                            self.__updateISCSI_attach(device, target, ip, port, chap_user, chap_pass)
                         if fs_shouldFormat.lower() == 'yes' and self.__checkISCSI_shouldFormat(device, fs_type):
                             LOG.debug("formatting fs")
                             self.__updateISCSI_format(device,fs_type,fs_options)
@@ -973,7 +1026,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                             LOG.debug("mounting fs")
                             self.__updateISCSI_mount(device, fs_type, mount_point)
                             pass
-                        
+                    
+                    if not os.path.exists(device):
+                        LOG.error('iSCSI storage failed.  Device not attached.  Retry next loop')
+                        return
+                    
                     #mark storage device handled
                     storage_dir='/var/run/neuca/storage'
                     
