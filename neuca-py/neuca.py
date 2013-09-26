@@ -35,6 +35,8 @@ import re
 
 from netaddr import *
 
+import socket
+
 from subprocess import *
 from os import kill
 from signal import alarm, signal, SIGALRM, SIGKILL
@@ -134,7 +136,6 @@ class Commands:
            os.environ.update(env)
         return env
 
-
 class NeucaScript:
     def __init__(self, name, script):
         LOG.debug('Creating NeucaScript: ' + name + "--" + script)
@@ -168,9 +169,6 @@ class NeucaScript:
                 subprocess.Popen(["nohup", cmd])
             except IOError:
                 pass
-
-    
-
 
 class NEucaUserData(object):
     def __init__(self):
@@ -246,7 +244,9 @@ class NEucaUserData(object):
 
         return iqn
 
-
+    def getHostname(self):
+        return self.config.get('global','host_name').strip()
+        
     def empty(self):
         return len(self.userData) == 0
 
@@ -298,6 +298,8 @@ class NEucaOSCustomizer(object):
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
     """Linux customizer """
     networkConfigurationFile = '/etc/network/interfaces'
+    
+    iscsiInitScript='open-iscsi'
     
     def __init__(self, distro):
         super(NEucaLinuxCustomizer, self).__init__(distro)
@@ -506,7 +508,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         #stop open iscsi
         import os
         args = ''
-        command = 'open-iscsi'
+        command = self.iscsiInitScript
         exeExists=False
         for dir in ['', '/etc/init.d']:
             executable = os.path.join(dir, command)
@@ -540,7 +542,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         #start open iscsi
         args = ''
-        command = 'open-iscsi'
+        command = self.iscsiInitScript
         exeExists=False
         for dir in ['', '/etc/init.d']:
             executable = os.path.join(dir, command)
@@ -579,7 +581,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         args = ''
         command = 'iscsiadm'
         exeExists=False
-        for dir in ['', '/bin/', '/usr/bin']:
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
@@ -623,7 +625,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         args = ''
         command = 'iscsiadm'
         exeExists=False
-        for dir in ['', '/bin/', '/usr/bin']:
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
@@ -703,7 +705,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         args = ''
         command = 'iscsiadm'
         exeExists=False
-        for dir in ['', '/bin/', '/usr/bin']:
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
@@ -793,7 +795,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         args = ''
         command = 'mount'
         exeExists=False
-        for dir in ['', '/bin/', '/usr/bin']:
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
@@ -977,23 +979,23 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         LOG.error('Exception: Failed to discover iSCSI targets for device (' + str(ip) + ')')
                         target == 'Failed to discover iSCSI'
 
-                    lun = device[1].split(':')[4]
-                    chap_user = device[1].split(':')[5]
-                    chap_pass = device[1].split(':')[6]
-                    shouldAttach = device[1].split(':')[7]
+                    lun = device[1].split(':')[3]
+                    chap_user = device[1].split(':')[4]
+                    chap_pass = device[1].split(':')[5]
+                    shouldAttach = device[1].split(':')[6]
 
-                    if len(device[1].split(':')) > 10:
-                        fs_type = device[1].split(':')[8]
-                        fs_options = device[1].split(':')[9]
-                        fs_shouldFormat = device[1].split(':')[10]
+                    if len(device[1].split(':')) > 9:
+                        fs_type = device[1].split(':')[7]
+                        fs_options = device[1].split(':')[8]
+                        fs_shouldFormat = device[1].split(':')[9]
                         
                     else:
                         fs_type = None
                         fs_options = None
                         fs_shouldFormat = None
 
-                    if len(device[1].split(':')) > 11:
-                        mount_point = device[1].split(':')[11]
+                    if len(device[1].split(':')) > 10:
+                        mount_point = device[1].split(':')[10]
                     else:
                         mount_point = None
 
@@ -1063,8 +1065,33 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 LOG.error('Unknown storage protocol: ' + str(proto))
                     
 
+    def updateHostname(self):
+        LOG.debug('updateHostname')
 
+        #get the new hostname
+        try:
+            new_hostname = self.userData.getHostname()
+        except:
+            LOG.error('Exception getting hostname.  Probably host_name field not in userdata file: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
+            LOG.error('Not setting hostname')
+            return
+        
+        if new_hostname == None:
+            LOG.error('host_name is None.  Not setting host_name')
+            return
 
+        #get the old hostname
+        try:
+            old_hostname = socket.gethostname()
+        except:
+            old_hostname = None
+
+        LOG.debug('new_hostname = ' + str(new_hostname) + ', old_hostname = ' + str(old_hostname))
+        try:
+            if new_hostname != old_hostname:
+                os.system('/bin/hostname ' + str(new_hostname))
+        except:
+            LOG.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
 
     def updateUserData(self):
 	self.userData.updateUserData()
@@ -1072,6 +1099,33 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
     def getAllUserData(self):
         return self.userData.getAllUserData()
 
+    def getField(self, section, field):
+        return self.userData.get(section,field)
+
+class NEucaRedhatCustomizer(NEucaLinuxCustomizer): 
+    def __init__(self, distro):
+        super(NEucaRedhatCustomizer, self).__init__(distro)
+        iscsiInitScript='iscsi'
+
+class NEucaFedoraCustomizer(NEucaLinuxCustomizer):
+    def __init__(self, distro):
+        super(NEucaFedoraCustomizer, self).__init__(distro)
+        iscsiInitScript='iscsi'
+
+class NEucaCentosCustomizer(NEucaLinuxCustomizer):
+    def __init__(self, distro):
+        super(NEucaCentosCustomizer, self).__init__(distro)
+        iscsiInitScript='iscsi'
+
+class NEucaDebianCustomizer(NEucaLinuxCustomizer):
+    def __init__(self, distro):
+        super(NEucaDebianCustomizer, self).__init__(distro)
+        iscsiInitScript='open-iscsi'
+
+class NEucaUbuntuCustomizer(NEucaLinuxCustomizer):
+    def __init__(self, distro):
+        super(NEucaUbuntuCustomizer, self).__init__(distro)
+        iscsiInitScript='open-iscsi'
 
 import time
 from daemon import runner
@@ -1092,8 +1146,8 @@ class NEucad():
 
         # choose which OS
         self.customizer = {
-            "debian": NEucaLinuxCustomizer,
-            "Ubuntu": NEucaLinuxCustomizer,
+            "debian": NEucaDebianCustomizer,
+            "Ubuntu": NEucaDebianCustomizer,
             "redhat": NEucaLinuxCustomizer,
             "fedora": NEucaLinuxCustomizer,
             "centos": NEucaLinuxCustomizer,
@@ -1106,6 +1160,7 @@ class NEucad():
             try:
                 LOG.debug("Polling")
 		self.customizer.updateUserData()
+                self.customizer.updateHostname()
                 self.customizer.updateNetworking()
                 self.customizer.updateStorage()
                 self.customizer.runNewScripts()
@@ -1174,6 +1229,25 @@ def main():
 
     if invokeName == "neuca-get-public-ip":
         print customizer.getPublicIP()
+
+    if invokeName == "neuca-get":
+        argv = sys.argv[1:]
+        if len(argv) >= 2:
+            section = argv[0]
+            field = argv[1]
+        elif (len(argv) == 1):
+            section = 'global'
+            field = argv[0]
+        else:
+            print 'usage: necua-get [section] <field>'
+            print "section defaults to 'global' if left unassigned"
+            sys.exit(0)
+
+        print customizer.getField(section,field)
+
+    if invokeName == "neuca-version":
+        print 'NEuca version 1.3'
+
 
     if invokeName == "neucad":
         app = NEucad()
