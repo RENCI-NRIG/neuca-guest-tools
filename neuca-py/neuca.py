@@ -298,12 +298,12 @@ class NEucaOSCustomizer(object):
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
     """Linux customizer """
     networkConfigurationFile = '/etc/network/interfaces'
+    	
+    #iscsiInitScript=''
     
-    iscsiInitScript='open-iscsi'
-    
-    def __init__(self, distro):
-        super(NEucaLinuxCustomizer, self).__init__(distro)
-        
+    def __init__(self, distro,iscsiInitScript):
+        super(NEucaLinuxCustomizer, self).__init__(distro)        
+	self.iscsiInitScript = iscsiInitScript
 
     def initLogging(self):
         
@@ -519,7 +519,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 break
 
         if not exeExists:
-            LOG.error('open-iscsi init.d script does not exist in paths ., /etc/init.d')
+            LOG.error('iscsi init.d script '+ str(self.iscsiInitScript)  +  ' does not exist in paths ., /etc/init.d')
             return
 
         try:
@@ -1104,28 +1104,28 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
 class NEucaRedhatCustomizer(NEucaLinuxCustomizer): 
     def __init__(self, distro):
-        super(NEucaRedhatCustomizer, self).__init__(distro)
-        iscsiInitScript='iscsi'
+        super(NEucaRedhatCustomizer, self).__init__(distro,'iscsi')
+        #self.iscsiInitScript='iscsi'
 
 class NEucaFedoraCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaFedoraCustomizer, self).__init__(distro)
-        iscsiInitScript='iscsi'
+        super(NEucaFedoraCustomizer, self).__init__(distro,'iscsi')
+        #self.iscsiInitScript='iscsi'
 
 class NEucaCentosCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaCentosCustomizer, self).__init__(distro)
-        iscsiInitScript='iscsi'
+        super(NEucaCentosCustomizer, self).__init__(distro,'iscsi')
+        #self.iscsiInitScript='iscsi'
 
 class NEucaDebianCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaDebianCustomizer, self).__init__(distro)
-        iscsiInitScript='open-iscsi'
+        super(NEucaDebianCustomizer, self).__init__(distro,'open-iscsi')
+        #self.iscsiInitScript='open-iscsi'
 
 class NEucaUbuntuCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaUbuntuCustomizer, self).__init__(distro)
-        iscsiInitScript='open-iscsi'
+        super(NEucaUbuntuCustomizer, self).__init__(distro,'open-iscsi')
+        #self.iscsiInitScript='open-iscsi'
 
 import time
 from daemon import runner
@@ -1148,13 +1148,15 @@ class NEucad():
         self.customizer = {
             "debian": NEucaDebianCustomizer,
             "Ubuntu": NEucaDebianCustomizer,
-            "redhat": NEucaLinuxCustomizer,
-            "fedora": NEucaLinuxCustomizer,
-            "centos": NEucaLinuxCustomizer,
+            "redhat": NEucaCentosCustomizer,
+            "fedora": NEucaCentosCustomizer,
+            "centos": NEucaCentosCustomizer,
         }.get(self.distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(self.distro)
 
 
         self.customizer.initLogging()
+		
+	LOG.info('disto: ' + str(self.distro))
 
         while True:
             try:
@@ -1193,11 +1195,11 @@ def main():
 
     # choose which OS
     customizer = { 
-        "debian": NEucaLinuxCustomizer,
-        "Ubuntu": NEucaLinuxCustomizer,
-        "redhat": NEucaLinuxCustomizer,
-        "fedora": NEucaLinuxCustomizer,
-	"centos": NEucaLinuxCustomizer,
+        "debian": NEucaDebianCustomizer,
+        "Ubuntu": NEucaDebianCustomizer,
+        "redhat": NEucaCentosCustomizer,
+        "fedora": NEucaCentosCustomizer,
+	"centos": NEucaCentosCustomizer,
     }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
 
     customizer.updateUserData()
