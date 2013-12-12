@@ -205,7 +205,12 @@ class NEucaUserData(object):
             return
  
     def getBootScript(self):
-        return self.config.get('scripts', 'bootscript')
+        try:
+            bootscript = self.config.get('scripts', 'bootscript')
+        except:
+            bootscript = None
+
+        return bootscript
 
     def getAllScripts(self):
         return self.config.items('scripts')
