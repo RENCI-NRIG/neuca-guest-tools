@@ -1,11 +1,19 @@
 #! /bin/sh
+#
+# neuca        Start up the NEucaD post-boot configuration daemon
+#
+# chkconfig: 2345 55 25
+# description: NEuca is a post-boot configuration mechanism for ExoGENI VMs. \
+#              This service starts up the NEuca daemon.
+#
+
 ### BEGIN INIT INFO
 # Provides:          NEuca
 # Required-Start:    $network
 # Required-Stop:     $network
 # Default-Start:     S
 # Default-Stop:      0 6
-# Short-Description: NEuca post-boot configuration script
+# Short-Description: NEuca post-boot configuration daemon
 # Description:       If user-data is supplied to VM guest, it is used to
 #                    perform additional post-boot configuration actions
 ### END INIT INFO
@@ -41,7 +49,7 @@ NEUCAD=/usr/bin/$prog
 check_privsep_dir() {
     # Create the PrivSep empty dir if necessary
     if [ ! -d /var/run/neuca ]; then
-	mkdir /var/run/neuca
+        mkdir /var/run/neuca
         mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
     fi
 
@@ -49,21 +57,18 @@ check_privsep_dir() {
         mkdir /var/log/neuca
         chmod 0755 /var/log/neuca
     fi
-
 }
 
 do_start()
 {
     check_privsep_dir
     
-    #log_daemon_msg "Starting NEuca server" "neuca"
     $NEUCAD start
 }
 
 
 do_stop()
 {
-    #log_daemon_msg "Stopping NEuca server" "neuca"
     $NEUCAD stop
 }
 

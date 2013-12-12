@@ -5,7 +5,7 @@
 # Required-Stop:     $network
 # Default-Start:     S
 # Default-Stop:      0 6
-# Short-Description: NEuca post-boot configuration script
+# Short-Description: NEuca post-boot configuration daemon
 # Description:       If user-data is supplied to VM guest, it is used to
 #                    perform additional post-boot configuration actions
 ### END INIT INFO
@@ -38,8 +38,8 @@ NEUCAD=/usr/bin/neucad
 check_privsep_dir() {
     # Create the PrivSep empty dir if necessary
     if [ ! -d /var/run/neuca ]; then
-	mkdir /var/run/neuca
-	mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
+        mkdir /var/run/neuca
+        mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
     fi
 
     if [ ! -d /var/log/neuca ]; then
