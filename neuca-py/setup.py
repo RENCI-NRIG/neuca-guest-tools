@@ -1,6 +1,10 @@
-from distutils.core import setup
+#!/usr/bin/env python
 
-setup(name='neuca',
-      version='0.1',
-      py_modules=['neuca'],
-      )
+from distutils.core import setup
+from neuca_guest_tools import __version__
+
+setup(name = 'neuca_guest_tools',
+      version = __version__,
+      packages = ['neuca_guest_tools'],
+      scripts = ['neuca'],
+)

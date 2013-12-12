@@ -22,32 +22,34 @@ import sys
 import os
 import tempfile
 import stat
-import logging as LOG
-import logging.handlers
 import subprocess
 
 import boto.utils
 import ConfigParser
 import ipaddr
-import platform
 import traceback
 import re
+import socket
+import time
+
+import neuca_guest_tools as neuca
+
+import logging as LOG
+import logging.handlers
 
 from netaddr import *
-
-import socket
-
 from subprocess import *
+
 from os import kill
 from signal import alarm, signal, SIGALRM, SIGKILL
 from subprocess import PIPE, Popen
-
+from daemon import runner
 
 """ This script performs distribution-specific customization at boot-time
 based on EC2 user-data passed to the instance """
 
 
-#Temp function so I don't have to run it on a real VM
+# Temp function so I don't have to run it on a real VM
 def get_local_userdata():
     f = open('new_userdata.ini','r')
     rtnStr = f.read()
@@ -55,7 +57,6 @@ def get_local_userdata():
     
     return rtnStr
     
-
 
 class TempFile(file):
     """Copyright (c) 2010 Alon Swartz <alon@turnkeylinux.org> - all rights reserved"""
@@ -70,6 +71,7 @@ class TempFile(file):
         if self.pid == os.getpid():
             os.remove(self.path)
 
+
 class Commands:
     @classmethod
     def run_cmd(self, args):
@@ -79,7 +81,6 @@ class Commands:
         retval = p.communicate()[0]
                 
         return retval
-
 
     @classmethod
     def run(self, args, cwd = None, shell = False, kill_tree = True, timeout = -1, env = None):
@@ -136,19 +137,18 @@ class Commands:
            os.environ.update(env)
         return env
 
+
 class NeucaScript:
     def __init__(self, name, script):
         LOG.debug('Creating NeucaScript: ' + name + "--" + script)
 
-        self.scriptDir = '/var/run/neuca'
+        self.scriptDir = neuca.__rundir__
         self.name = name
 
-        #os.makedirs('/var/run/neuca')
         if not os.path.exists(self.scriptDir):
             os.makedirs(self.scriptDir)
             
         if not os.path.exists(self.scriptDir + "/" + self.name):
-
             fd = open(self.scriptDir + "/" + self.name, 'w')
             fd.write(script)
             fd.close()
@@ -157,7 +157,6 @@ class NeucaScript:
 
             self.run()
 
-        
     def run(self):
         executable = self.scriptDir + '/' + self.name
         if os.path.exists(executable):
@@ -169,6 +168,7 @@ class NeucaScript:
                 subprocess.Popen(["nohup", cmd])
             except IOError:
                 pass
+
 
 class NEucaUserData(object):
     def __init__(self):
@@ -185,7 +185,6 @@ class NEucaUserData(object):
 	pass
 
     def updateUserData(self):
-        
         # TODO:  change back for real VM 
         self.userData=boto.utils.get_instance_userdata() 
         #self.userData=get_local_userdata()
@@ -196,8 +195,6 @@ class NEucaUserData(object):
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(fh.path)
-
-        
 
     def get(self, section, field):
 	try:
@@ -253,6 +250,7 @@ class NEucaUserData(object):
     def getAllUserData(self):
 	return self.userData 
     
+
 class NEucaOSCustomizer(object):
     """Generic OS customizer """
     def __init__(self, distro):
@@ -279,7 +277,6 @@ class NEucaOSCustomizer(object):
     def getAllScripts(self):
         return self.userData.getAllScripts()  
 
-    
     def isRouter(self):
         return self.userData.isRouter()
 
@@ -295,40 +292,30 @@ class NEucaOSCustomizer(object):
     def getPublicIP(self):
 	return str(boto.utils.get_instance_metadata()['public-ipv4'])
 
+
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
     """Linux customizer """
-    networkConfigurationFile = '/etc/network/interfaces'
-    	
-    #iscsiInitScript=''
-    
+
     def __init__(self, distro,iscsiInitScript):
         super(NEucaLinuxCustomizer, self).__init__(distro)        
 	self.iscsiInitScript = iscsiInitScript
+        self.storage_dir = neuca.__rundir__ + '/storage'
 
     def initLogging(self):
-        
         LOG.basicConfig(level=LOG.DEBUG, filename='/dev/null')
         
-        if not os.path.exists('/var/log/neuca'):
-            os.makedirs('/var/log/neuca')
+        if not os.path.exists(neuca.__logdir__):
+            os.makedirs(neuca.__logdir__)
 
-        handler = LOG.handlers.RotatingFileHandler("/var/log/neuca/neuca-agent.log", backupCount=50, maxBytes=5000000)
+        handler = LOG.handlers.RotatingFileHandler(neuca.__logdir__ + '/' + neuca.__logfile__,
+                                                   backupCount=50, maxBytes=5000000)
         handler.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         handler.setFormatter(formatter)
 
         LOG.getLogger('').addHandler(handler)
-        
         LOG.info('Starting Logger')
 	
-
-    def __interfaceInConfig(self, intf):
-        fh = open(self.networkConfigurationFile, 'r')
-        for line in fh:
-            if intf in line:
-                return True
-        return False
-    
     def __findIfaceByMac(self, mac):
         """ 
         Gets the interface name for a given mac address
@@ -354,11 +341,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             for line in pipe:
                 #if it doesn't begin with white space we have a new iface
                 words = line.lower().split() 
-                if not line.startswith((' ','\t','\n')) and len(words) > 0:
+                if not line.startswith((' ', '\t', '\n')) and len(words) > 0:
                     iface = words[0].strip(':')
                 
                 for i in range(len(words)):
-                    if words[i] in hw_identifiers and words[i+1].replace(':','') == mac:
+                    if words[i] in hw_identifiers and words[i+1].replace(':', '') == mac:
                         return iface
         return None
               
@@ -377,7 +364,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 pipe = os.popen(cmd)
             except IOError:
                 continue
-
 
     def __ifaceUp(self, iface, ip):
         import os
@@ -415,7 +401,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             LOG.error("NEuca found unkown interface state: " + str(mac) + " " + str(state))
 
     def __checkISCSI_shouldFormat(self, device, fs_type):
-        LOG.debug('__updateISCSI_shouldFormat(self, '+device+', '  + fs_type +')')
+        LOG.debug('__updateISCSI_shouldFormat(self, ' + device + ', ' + fs_type + ')')
         import os
         current_fs_type=None
         args = ''
@@ -430,7 +416,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 break
 
         if not exeExists:
-            LOG.error('blkid executable does not exist in paths ., /sbin, or /usr/sbin.  Cannot check for existing fs_type.  Will not format disk')
+            LOG.error('blkid executable does not exist in paths ., /sbin, or /usr/sbin.' +
+                      'Cannot check for existing fs_type. Will not format disk')
             return False
 
         try:
@@ -443,7 +430,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 return True
 
             if rtncode != 0:
-                LOG.error('rtncode: ' + str(rtncode) + 'Failed to test for device filesystem (' + str(device) + ' with command: ' + str(cmd))
+                LOG.error('rtncode: ' + str(rtncode) + 'Failed to test for device filesystem (' +
+                          str(device) + ' with command: ' + str(cmd))
                 LOG.error('Cannot check for existing fs_type.  Will not format disk')
                 return False
 
@@ -455,29 +443,28 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     current_fs_type = v.split('=')[1]
                     if current_fs_type  == '"' + fs_type + '"':
                        #found match
-                        LOG.debug('shouldFormat -> False, disk is formated with desired fs_type: ' + str(device) + ', ' + str(fs_type))
+                        LOG.debug('shouldFormat -> False, disk is formated with desired fs_type: ' +
+                                  str(device) + ', ' + str(fs_type))
                         return False
                 break
             
         except Exception as e:
-            LOG.error('Exception: Failed to test for device filesystem. Cannot check for existing fs_type.  Will not format disk (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            LOG.error('Exception: Failed to test for device filesystem. ' +
+                      'Cannot check for existing fs_type. Will not format disk (' + str(device) +
+                      ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" +
+                      str(traceback.format_exc()))
 
-        LOG.debug('shouldFormat -> True, disk is formated with ' + str(current_fs_type) + ': ' + str(device) + ', ' + str(fs_type))
+        LOG.debug('shouldFormat -> True, disk is formated with ' + str(current_fs_type) + ': ' +
+                  str(device) + ', ' + str(fs_type))
         return True
 
-
-
-
     def __checkISCSI_handled(self, device_entry):
-        base_path = '/var/run/neuca/storage'
-
-        if os.path.exists(str(base_path) + '/' + str(device_entry)):
+        if os.path.exists(str(self.storage_dir) + '/' + str(device_entry)):
             return True
         else:
             return False
 
     def __updateISCSI_initiator(self, new_initiator_iqn):
-
         #test existing iscsi iqn, if same then skip /etc/iscsi/initiatorname.iscsi
         f = open('/etc/iscsi/initiatorname.iscsi','r')
         initiatorname_iscsi = f.read()
@@ -490,7 +477,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 tokens = line.split('=')
                 if len(tokens) >= 2 and tokens[0].strip() == 'InitiatorName':
                     if tokens[1].strip() == str(new_initiator_iqn).strip():
-                        LOG.warning("__updateISCSI_initiator: new and old iqn are the same (" + str(new_initiator_iqn) +  "), not updating.")
+                        LOG.warning("__updateISCSI_initiator: new and old iqn are the same (" +
+                                    str(new_initiator_iqn) +  "), not updating.")
                         return
                     else:
                         index = lines.index(line)
@@ -531,7 +519,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 return None
 
         except Exception as e:
-            LOG.error('Exception: Failed to shutdown open-iscsi with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            LOG.error('Exception: Failed to shutdown open-iscsi with command: ' + str(cmd) + " " +
+                      str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return
 
         #update initiator file
@@ -569,11 +558,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             return
 
         #clean up files from previous mounts, rm /var/run/neuca/storage/*
-        for f in os.listdir('/var/run/neuca/storage'):
+        for f in os.listdir(self.storage_dir):
             LOG.debug('Removing file: ' + str(f))
-            os.remove('/var/run/neuca/storage/' + f)
-        
-
+            os.remove(self.storage_dir + f)
 
     def __ISCSI_discover(self, ip):
 	LOG.debug('__ISCSI_discover(self, ' + str(ip) )
@@ -620,8 +607,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 	return None
 
     def __updateISCSI_attach(self, device, target, ip, port, chap_user, chap_pass):
-        LOG.debug('__updateISCSI_target_login(self, '+ str(device) +', ' + str(target)  + ', ' + str(ip)  + ', ' + str(port) +')')
-        import os
+        LOG.debug('__updateISCSI_target_login(self, ' + str(device) + ', ' + str(target) +
+                  ', ' + str(ip)  + ', ' + str(port) +')')
         args = ''
         command = 'iscsiadm'
         exeExists=False
@@ -637,49 +624,66 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             LOG.error('iSCSI executable iscsiadm does not exist in paths ., /bin, or /usr/bin')
             return
 
-                #Attach the device is it is not already attached                                                                                                                                                                                                                            
+        #Attach the device is it is not already attached
         if not os.path.exists(device):
-            #iSCSI device not attached                                                                                                                                                                                                                                              
-
-            #set authmethod : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.authmethod --value=CHAP                                                                                                                    
+            #iSCSI device not attached
+            #set authmethod:
+            #iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.authmethod --value=CHAP
             try:
-                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.authmethod", "--value=CHAP" ]
+                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip) +
+                        ":" + str(port), "--op=update", "--name", "node.session.auth.authmethod", "--value=CHAP" ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
                 if rtncode != 0:
-                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI authmethod device (' + str(device) + ' with command: ' + str(cmd))
+                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI authmethod device (' +
+                              str(device) + ' with command: ' + str(cmd))
                     return
             except Exception as e:
-                LOG.error('Exception: Failed to set iSCSI authmethod device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+                LOG.error('Exception: Failed to set iSCSI authmethod device  (' +
+                          str(device) + ') with command: ' + str(cmd) + " " +
+                          str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
 
-            #set chap username : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.username --value=username                                                                                                               
+            #set chap username:
+            #iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.username --value=username                                                                                                               
             try:
-                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.username", "--value="+str(chap_user) ]
+                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip) +
+                        ":" + str(port), "--op=update", "--name", "node.session.auth.username", "--value=" + str(chap_user) ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
                 if rtncode != 0:
-                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI chap user for device (' + str(device) + ' with command: ' + str(cmd))
+                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI chap user for device (' +
+                              str(device) + ' with command: ' + str(cmd))
                     return
             except Exception as e:
-                LOG.error('Exception: Failed to set iSCSI chap user for device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+                LOG.error('Exception: Failed to set iSCSI chap user for device  (' +
+                          str(device) + ') with command: ' + str(cmd) + " " +
+                          str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
 
-            #set chap password : iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.password --value=password                                                                                                               
+            #set chap password:
+            #iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --op=update --name node.session.auth.password --value=password
             try:
-                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), "--op=update", "--name", "node.session.auth.password", "--value="+str(chap_pass) ]
+                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip) +
+                        ":" + str(port), "--op=update", "--name", "node.session.auth.password", "--value="+str(chap_pass) ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
                 if rtncode != 0:
-                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI chap password device (' + str(device) + ' with command: ' + str(cmd))
+                    LOG.error('rtncode: ' + str(rtncode) + 'Failed to set iSCSI chap password device (' +
+                              str(device) + ' with command: ' + str(cmd))
                     return
             except Exception as e:
-                LOG.error('Exception: Failed to set iSCSI chap pass device  (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+                LOG.error('Exception: Failed to set iSCSI chap pass device  (' +
+                          str(device) + ') with command: ' + str(cmd) + " " +
+                          str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
                 return
 
-            #attach target: iscsiadm --mode node --targetname target0  --portal 172.16.101.43:3260   --login                                                                                                                                                                        
+            #attach target:
+            #iscsiadm --mode node --targetname target0 --portal 172.16.101.43:3260 --login
             try:
-                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip)+":"+str(port), '--login' ]
+                cmd = [ str(executable), "--mode", "node", "--targetname", str(target), "--portal", str(ip) +
+                        ":" + str(port), '--login' ]
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
                 if rtncode != 0:
-                    LOG.warning('rtncode: ' + str(rtncode) + 'Failed to attach iSCSI target for device (' + str(device) + ' with command: ' + str(cmd))
+                    LOG.warning('rtncode: ' + str(rtncode) + 'Failed to attach iSCSI target for device (' +
+                                str(device) + ' with command: ' + str(cmd))
                     self.__updateISCSI_target_rescan(device, target, ip, port)
                 else:
                     LOG.debug('Attach stdout: ' +str(data_stdout))
@@ -719,13 +723,15 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         #iscsiadm -m discovery -t st -p 10.104.0.2 -o delete -o new
         try:
-            cmd = [ str(executable), "-m", "discovery", "-t", "st", "--portal", str(ip)+":"+str(port), "-o", "delete", "-o", "new" ]
+            cmd = [ str(executable), "-m", "discovery", "-t", "st", "--portal", str(ip) +
+                    ":" + str(port), "-o", "delete", "-o", "new" ]
             rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
                 LOG.error('rtncode: ' + str(rtncode) + 'Failed re-discovery with command: ' + str(cmd))
                 return
         except Exception as e:
-            LOG.error('Exception: Failed re-discovery with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            LOG.error('Exception: Failed re-discovery with command: ' + str(cmd) + " " +
+                      str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return
          
         #iscsiadm -m session --rescan          
@@ -736,7 +742,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 LOG.error('rtncode: ' + str(rtncode) + 'Failed to rescan with command: ' + str(cmd))
                 return
         except Exception as e:
-            LOG.error('Exception: Failed to rescan with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+            LOG.error('Exception: Failed to rescan with command: ' + str(cmd) + " " +
+                      str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return
 
         LOG.debug('Checking device attached: ' + str(device))
@@ -779,13 +786,16 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
                 rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=3600)
                 if rtncode != 0:
-                    LOG.error('rtncode: ' + str(rtncode) + ', Failed to format iSCSI targets for device (' + str(device) + ' with command: ' + str(cmd))
+                    LOG.error('rtncode: ' + str(rtncode) + ', Failed to format iSCSI targets for device (' +
+                              str(device) + ' with command: ' + str(cmd))
                     LOG.error('stdout: ' + str(data_stdout))
                     LOG.error('stderr: ' + str(data_stderr))
                     return
 
             except Exception as e:
-                LOG.error('Exception: Failed to format iSCSI targets for device (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
+                LOG.error('Exception: Failed to format iSCSI targets for device (' + str(device) +
+                          ') with command: ' + str(cmd) + " " + str(type(e)) + " : " + str(e) + "\n" +
+                          str(traceback.format_exc()))
         else:
             LOG.debug('iSCSI device not attached: ' + str(device))
 
@@ -827,15 +837,15 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 
             rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=3600)
             if rtncode != 0:
-                LOG.error('rtncode: ' + str(rtncode) + ', Failed to format iSCSI targets for device (' + str(device) + ' with command: ' + str(cmd))
+                LOG.error('rtncode: ' + str(rtncode) + ', Failed to format iSCSI targets for device (' +
+                          str(device) + ' with command: ' + str(cmd))
                 LOG.error('stdout: ' + str(data_stdout))
                 LOG.error('stderr: ' + str(data_stderr))
                 return
             
         except Exception as e:
-            LOG.error('Exception: Failed to mount iSCSI device (' + str(device) + ') with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
-
-            
+            LOG.error('Exception: Failed to mount iSCSI device (' + str(device) + ') with command: ' +
+                      str(cmd) + " " + str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
 
     def __updateRouter(self, isRtr):
         if isRtr == 'user':
@@ -853,7 +863,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             LOG.info("Unknown Router value: " + str(isRtr))
         f.close()
 
-
     def __addRoute(self,network, router):
         import os
         args = ''
@@ -869,7 +878,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 pipe = os.popen(cmd)
             except IOErExror:
                 continue
-
 
     def __delRoute(self, network):
         import os
@@ -944,14 +952,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             self.__updateRoute(route[0],route[1])
     
     def runNewScripts(self):
-        import time
         #self.userData.updateUserData()
-
         for i in  self.getAllScripts():
             script = NeucaScript(i[0],i[1])
         
     def updateStorage(self):
-
         iscsi_iqn = self.getISCSI_iqn()
 
         LOG.debug('iscsi_iqn = ' + str(iscsi_iqn))
@@ -1034,12 +1039,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         return
                     
                     #mark storage device handled
-                    storage_dir='/var/run/neuca/storage'
-                    
-                    if not os.path.exists(storage_dir):
-                        os.makedirs(storage_dir)
+                    if not os.path.exists(self.storage_dir):
+                        os.makedirs(self.storage_dir)
 
-                    fd = open(storage_dir + '/' + dev_name, 'w')
+                    fd = open(self.storage_dir + '/' + dev_name, 'w')
                     fd.write('ip = ' + str(ip) + '\n')
                     fd.write('port = ' +str(port) + '\n')
                     fd.write('target = ' +str(target) + '\n')
@@ -1055,7 +1058,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     fd.close()
 
                 except Exception as e:
-                    LOG.error('Exception in iSCSI storage: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
+                    LOG.error('Exception in iSCSI storage: ' + str(e) + "\n" + str(type(e)) +
+                              "\n" + str(traceback.format_exc()))
                     ip = None
                     port = None
                     target = None
@@ -1072,7 +1076,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         try:
             new_hostname = self.userData.getHostname()
         except:
-            LOG.error('Exception getting hostname.  Probably host_name field not in userdata file: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
+            LOG.error('Exception getting hostname.  Probably host_name field not in userdata file: ' +
+                      str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
             LOG.error('Not setting hostname')
             return
         
@@ -1091,7 +1096,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             if new_hostname != old_hostname:
                 os.system('/bin/hostname ' + str(new_hostname))
         except:
-            LOG.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
+            LOG.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
 
     def updateUserData(self):
 	self.userData.updateUserData()
@@ -1102,61 +1107,33 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
     def getField(self, section, field):
         return self.userData.get(section,field)
 
-class NEucaRedhatCustomizer(NEucaLinuxCustomizer): 
+
+class NEucaRedhatCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaRedhatCustomizer, self).__init__(distro,'iscsi')
+        super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsi')
         #self.iscsiInitScript='iscsi'
 
-class NEucaFedoraCustomizer(NEucaLinuxCustomizer):
-    def __init__(self, distro):
-        super(NEucaFedoraCustomizer, self).__init__(distro,'iscsi')
-        #self.iscsiInitScript='iscsi'
-
-class NEucaCentosCustomizer(NEucaLinuxCustomizer):
-    def __init__(self, distro):
-        super(NEucaCentosCustomizer, self).__init__(distro,'iscsi')
-        #self.iscsiInitScript='iscsi'
 
 class NEucaDebianCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaDebianCustomizer, self).__init__(distro,'open-iscsi')
+        super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi')
         #self.iscsiInitScript='open-iscsi'
 
-class NEucaUbuntuCustomizer(NEucaLinuxCustomizer):
-    def __init__(self, distro):
-        super(NEucaUbuntuCustomizer, self).__init__(distro,'open-iscsi')
-        #self.iscsiInitScript='open-iscsi'
-
-import time
-from daemon import runner
 
 class NEucad():
     def __init__(self):
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/null'
         self.stderr_path = '/dev/null'
-        self.pidfile_path =  '/var/run/neucad.pid'
+        self.pidfile_path = neuca.__rundir__ + neuca.__pidfile__
         self.pidfile_timeout = 5
         
-        self.distro = platform.dist()[0]
+        self.distro = neuca.__distro__
+        self.customizer = None
 
     def run(self):
-        import time
-
-
-        # choose which OS
-        self.customizer = {
-            "debian": NEucaDebianCustomizer,
-            "Ubuntu": NEucaDebianCustomizer,
-            "redhat": NEucaCentosCustomizer,
-            "fedora": NEucaCentosCustomizer,
-            "centos": NEucaCentosCustomizer,
-        }.get(self.distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(self.distro)
-
-
         self.customizer.initLogging()
-		
-	LOG.info('disto: ' + str(self.distro))
+	LOG.info('distro: ' + str(self.distro))
 
         while True:
             try:
@@ -1172,35 +1149,37 @@ class NEucad():
 	    except Exception as e:
 		LOG.debug("Exception in loop: " + str(type(e)) + "\n" + str(traceback.format_exc())  )
             time.sleep(10) 
-
         
 
 def main():
-    
-    distro = platform.dist()[0]
-
-    head,invokeName = os.path.split(sys.argv[0])
+    head, invokeName = os.path.split(sys.argv[0])
 
     if invokeName == "neuca":
-	print "Invoke as"
+	print "Invoke as one of the following:"
 	print "\tneuca-netconf - to configure host networking"
-	print "\tneuca-user-script - to retrieve user-specified post-boot script"
+	print "\tneuca-user-script - to retrieve initial user-specified post-boot script"
+	print "\tneuca-all-user-scripts - to retrieve all user-specified post-boot scripts"
+        print "\tneuca-run-scripts - to execute any newly created user-specified post-boot scripts"
         print "\tneuca-user-data - to retrieve full user data"
+        print "\tneuca-get - to retrieve specific items from user data"
+        print "\tneuca-routes - to show whether host has been specified as a router, and get all routes"
+        print "\tneuca-get-public-ip - to show the public IP of the host"
         print "\tneuca-distro - to check distribution detection"
+        print "\tneuca-version - to report the version of neuca in use"
         sys.exit(0)
 
     if invokeName == "neuca-distro":
-        print distro
+        print neuca.__distro__
         sys.exit(0)
 
     # choose which OS
     customizer = { 
         "debian": NEucaDebianCustomizer,
         "Ubuntu": NEucaDebianCustomizer,
-        "redhat": NEucaCentosCustomizer,
-        "fedora": NEucaCentosCustomizer,
-	"centos": NEucaCentosCustomizer,
-    }.get(distro, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(distro)
+        "redhat": NEucaRedhatCustomizer,
+        "fedora": NEucaRedhatCustomizer,
+	"centos": NEucaRedhatCustomizer,
+    }.get(neuca.__distro__, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(neuca.__distro__)
 
     customizer.updateUserData()
 
@@ -1219,12 +1198,10 @@ def main():
         
     if invokeName == "neuca-user-data":
 	print customizer.getAllUserData()
-	
 
     if invokeName == "neuca-routes":
         print "Router: " + str(customizer.isRouter())
         print customizer.getAllRoutes()
-
 
     if invokeName == "neuca-run-scripts":
         print customizer.runNewScripts()
@@ -1241,25 +1218,23 @@ def main():
             section = 'global'
             field = argv[0]
         else:
-            print 'usage: necua-get [section] <field>'
+            print 'usage: neuca-get [section] <field>'
             print "section defaults to 'global' if left unassigned"
             sys.exit(0)
 
-        print customizer.getField(section,field)
+        print customizer.getField(section, field)
 
     if invokeName == "neuca-version":
-        print 'NEuca version 1.3'
-
+        print 'NEuca version ' + neuca.__version__
 
     if invokeName == "neucad":
         app = NEucad()
+        app.customizer = customizer
         daemon_runner = runner.DaemonRunner(app)
         daemon_runner.do_action()
-
-    
 
     sys.exit(0)
 
 if __name__ == "__main__":
     main()
-    
+
