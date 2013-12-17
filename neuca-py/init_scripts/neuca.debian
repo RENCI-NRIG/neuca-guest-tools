@@ -17,7 +17,7 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="NEucaD post-boot configuration daemon"
 NAME=neuca
-NEUCAD=/usr/local/bin/neucad
+NEUCAD=/usr/bin/neucad
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME

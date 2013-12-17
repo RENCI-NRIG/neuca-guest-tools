@@ -1,0 +1,12 @@
+Source: neuca-guest-tools
+Maintainer: Victor J. Orlikowski <vjo@duke.edu>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.3
+Build-Depends: cdbs (>= 0.4.49), debhelper (>= 7.0.50~), python (>= 2.6), python-support
+
+Package: neuca-guest-tools
+Architecture: all
+Depends: ${python:Depends}, ${misc:Depends}, python-boto, python-daemon, python-ipaddr, python-netaddr
+Description: NEuca guest tools for ExoGENI VMs
+ The NEuca guest tools provide post-boot customization and configuration for ExoGENI VMs.
