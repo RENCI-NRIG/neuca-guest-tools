@@ -53,10 +53,7 @@ rm -rf %{buildroot}
 /sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
 
 %preun
-if [ $1 = 0 ]; then
-    /sbin/service neuca stop >/dev/null 2>&1 ||:
-    /sbin/chkconfig --del neuca
-fi
+/sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
 
 %changelog
 * Tue Dec 17 2013 Victor J. Orlikowski <vjo@duke.edu> - 1.4-1
