@@ -34,7 +34,6 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}%{python_sitelib}
 %{__python} setup.py install --skip-build --root %{buildroot}
 install -p -D -m 755 redhat/neuca.init %{buildroot}/etc/rc.d/init.d/neuca
-install -d -m 755 %{buildroot}/var/run/neuca
 install -d -m 755 %{buildroot}/var/log/neuca
 
 %clean
@@ -46,7 +45,6 @@ rm -rf %{buildroot}
 %{_bindir}/neuca*
 %{python_sitelib}/neuca_guest_tools
 %{python_sitelib}/*.egg-info
-%dir /var/run/neuca
 %dir /var/log/neuca
 
 %post
