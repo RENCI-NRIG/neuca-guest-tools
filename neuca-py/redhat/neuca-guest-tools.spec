@@ -55,7 +55,7 @@ rm -rf %{buildroot}
 %preun
 if [ $1 = 0 ]; then
     /sbin/service neuca stop >/dev/null 2>&1 ||:
-    /sbin/chkconfig --del foam
+    /sbin/chkconfig --del neuca
 fi
 
 %changelog
