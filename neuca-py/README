@@ -1,20 +1,34 @@
-This software is installed into images for guest VMs that are instantiated by 
-Eucalyptus with NEuca patches. Images can be RedHat (or derivatives like Fedora
-and Centos) or Debian/Ubuntu.
+This software is intended to be installed into guest VM images that will be
+instantiated by OpenStack installations that have been patched with the NEuca extensions.
 
-Typical installation involves mounting an existing VM image as a loopback device and
-performing chroot into it to perform the installation.
+VM images can be variants of RedHat (or derivatives, like Fedora and Centos) or Debian/Ubuntu;
+other Linux/Unix distributions can be supported, but will require minor patching.
+Code contributions are welcome!
 
-Prerequisites: python-2.6, python-ipaddr, python-boto and make
+Typically, installation will require mounting an existing VM image as a loopback device and
+chroot'ing into it to perform the installation.
 
-To install, simply say 'make install' as root. The software does its best to guess
-the Linux distribution that is on the image and installs appropriate startup scripts
-to be executed at boot time. To uninstall, say 'make uninstall'. 
+Prerequisites: python-2.6 or greater (but not python 3), python-ipaddr, python-netaddr,
+               python-daemon, and python-boto
+
+To install (when not using the supplied RPM or DEB), simply execute the following command:
+
+python setup.py install
+
+Init scripts are provided for both Debian and Redhat variants;
+check within the appropriately named directory, and install it "as appropriate."
 
 After the image boots you can also use the following tools from command line:
- * neuca-user-data - retrieve the entire user-data passed to this instance
- * neuca-user-script - retrieve the custom post-boot script (executed as S99 for the
-appropriate runlevel)
- * neuca-distro - tells you the best guess of the distribution you are running.
+ * neuca-netconf - to configure host networking
+ * neuca-user-script - to retrieve initial user-specified post-boot script
+ * neuca-all-user-scripts - to retrieve all user-specified post-boot scripts
+ * neuca-run-scripts - to execute any newly created user-specified post-boot scripts
+ * neuca-user-data - to retrieve full user data
+ * neuca-get - to retrieve specific items from user data
+ * neuca-routes - to show whether host has been specified as a router, and get all routes
+ * neuca-get-public-ip - to show the public IP of the host
+ * neuca-distro - to check distribution detection
+ * neuca-version - to report the version of neuca in use
+ * neuca - issues the help printed above
 
 For more information visit https://geni-orca.renci.org
