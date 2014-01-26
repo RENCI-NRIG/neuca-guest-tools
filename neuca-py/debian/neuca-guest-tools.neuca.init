@@ -40,6 +40,7 @@ check_privsep_dir() {
     if [ ! -d /var/run/neuca ]; then
         mkdir /var/run/neuca
         mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
+        mkdir /var/run/neuca/storage
     fi
 
     if [ ! -d /var/log/neuca ]; then
