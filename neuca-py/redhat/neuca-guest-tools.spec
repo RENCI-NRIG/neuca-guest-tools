@@ -15,7 +15,7 @@ BuildArch:      noarch
 BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root
 
 BuildRequires: python2-devel
-Requires: python-boto python-daemon python-ipaddr python-netaddr
+Requires: python-boto python-daemon python-ipaddr python-netaddr iscsi-initiator-utils
 Requires(post): /sbin/chkconfig
 Requires(preun): /sbin/chkconfig /sbin/service
 

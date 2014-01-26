@@ -9,7 +9,7 @@ Typically, installation will require mounting an existing VM image as a loopback
 chroot'ing into it to perform the installation.
 
 Prerequisites: python-2.6 or greater (but not python 3), python-ipaddr, python-netaddr,
-               python-daemon, and python-boto
+               python-daemon, python-boto, and the Open-iSCSI initiator utilities.
 
 To install (when not using the supplied RPM or DEB), simply execute the following command:
 

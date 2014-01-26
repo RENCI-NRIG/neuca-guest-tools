@@ -8,6 +8,6 @@ XB-Python-Version: ${python:Versions}
 
 Package: neuca-guest-tools
 Architecture: all
-Depends: ${python:Depends}, ${misc:Depends}, python-boto, python-daemon, python-ipaddr, python-netaddr
+Depends: ${python:Depends}, ${misc:Depends}, python-boto, python-daemon, python-ipaddr, python-netaddr, open-iscsi
 Description: NEuca guest tools for ExoGENI VMs
  The NEuca guest tools provide post-boot customization and configuration for ExoGENI VMs.
