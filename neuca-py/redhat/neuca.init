@@ -39,31 +39,27 @@ PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 NEUCASCRIPT=/etc/neuca/user-script
 NEUCAD=/usr/bin/$prog
+RUNDIR=/var/lib/$NAME
+LOGDIR=/var/log/$NAME
 
-# Exit if the package is not installed
-[ -x "$NEUCAD" ] || exit 0
+if [ ! -d "$RUNDIR" ]; then
+    echo "$RUNDIR missing; please check your installation!"
+    exit 1
+fi
 
-#
-# Function that starts the daemon/service
-#
-check_privsep_dir() {
-    # Create the PrivSep empty dir if necessary
-    if [ ! -d /var/run/neuca ]; then
-        mkdir /var/run/neuca
-        mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
-        mkdir /var/run/neuca/storage
-    fi
+if [ ! -d "$LOGDIR" ]; then
+    echo "$LOGDIR missing; please check your installation!"
+    exit 1
+fi
 
-    if [ ! -d /var/log/neuca ]; then
-        mkdir /var/log/neuca
-        chmod 0755 /var/log/neuca
-    fi
-}
+if [ -x "$NEUCAD" ]; then
+    echo "$NEUCAD missing; please check your installation!"
+    exit 1
+fi
+
 
 do_start()
 {
-    check_privsep_dir
-    
     $NEUCAD start
 }
 

@@ -18,6 +18,8 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="NEucaD post-boot configuration daemon"
 NAME=neuca
 NEUCAD=/usr/bin/neucad
+RUNDIR=/var/lib/$NAME
+LOGDIR=/var/log/$NAME
 
 # Read configuration variable file if it is present
 [ -r /etc/default/$NAME ] && . /etc/default/$NAME
@@ -32,27 +34,24 @@ NEUCAD=/usr/bin/neucad
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
 . /lib/lsb/init-functions
 
-#
-# Function that starts the daemon/service
-#
-check_privsep_dir() {
-    # Create the PrivSep empty dir if necessary
-    if [ ! -d /var/run/neuca ]; then
-        mkdir /var/run/neuca
-        mount -t tmpfs -o size=50M,mode=0755,exec tmpfs /var/run/neuca
-        mkdir /var/run/neuca/storage
-    fi
+if [ ! -d "$RUNDIR" ]; then
+    echo "$RUNDIR missing; please check your installation!"
+    exit 1
+fi
 
-    if [ ! -d /var/log/neuca ]; then
-        mkdir /var/log/neuca
-        chmod 0755 /var/log/neuca
-    fi
-}
+if [ ! -d "$LOGDIR" ]; then
+    echo "$LOGDIR missing; please check your installation!"
+    exit 1
+fi
+
+if [ -x "$NEUCAD" ]; then
+    echo "$NEUCAD missing; please check your installation!"
+    exit 1
+fi
+
 
 do_start()
 {
-    check_privsep_dir
-    
     $NEUCAD start
 }
 

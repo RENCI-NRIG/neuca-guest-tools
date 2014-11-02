@@ -3,7 +3,7 @@
 %endif
 
 Name:           neuca-guest-tools
-Version:        1.4
+Version:        1.5
 Release:        1
 Summary:        NEuca - the ExoGENI VM post-boot configuration utility
 
@@ -41,11 +41,13 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
+%attr(755, root, root) %dir /etc/neuca
+%attr(755, root, root) %dir /var/lib/neuca
+%attr(755, root, root) %dir /var/log/neuca
 /etc/rc.d/init.d/neuca
 %{_bindir}/neuca*
 %{python_sitelib}/neuca_guest_tools
 %{python_sitelib}/*.egg-info
-%dir /var/log/neuca
 
 %post
 /sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
@@ -54,5 +56,9 @@ rm -rf %{buildroot}
 /sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
 
 %changelog
+* Sat Nov 01 2014 Victor J. Orlikowski <vjo@duke.edu> - 1.5-1
+- 1.5 Update to new revision
+
 * Tue Dec 17 2013 Victor J. Orlikowski <vjo@duke.edu> - 1.4-1
 - 1.4 Initial packaging for RPM-based distributions
+
