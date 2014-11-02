@@ -49,32 +49,18 @@ if [ -x "$NEUCAD" ]; then
     exit 1
 fi
 
-
-do_start()
-{
-    $NEUCAD start
-}
-
-
-do_stop()
-{
-    $NEUCAD stop
-}
-
-
 case "$1" in
   start)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
-	do_start
+	$NEUCAD start
 	;;
   stop)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
-	do_stop
+	$NEUCAD stop
 	;;
   restart|force-reload)
 	[ "$VERBOSE" != no ] && log_daemon_msg "Re-starting $DESC" "$NAME"
-	do_stop
-	do_start	
+	$NEUCAD restart
 	;;
   *)
 	echo "Usage: $SCRIPTNAME {start|stop|restart}" >&2
