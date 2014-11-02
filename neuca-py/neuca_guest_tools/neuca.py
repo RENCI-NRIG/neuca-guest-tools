@@ -331,7 +331,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         based on code from uuid.py by Ka-Ping Yee <ping@zesty.ca> 
         """
 
-        import os
         args = '-a'
         hw_identifiers = ['hwaddr', 'ether', 'HWaddr']
         command = 'ifconfig'
@@ -356,9 +355,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     if words[i] in hw_identifiers and words[i+1].replace(':', '') == mac:
                         return iface
         return None
-              
+
+    def __macDisabledByUser(self, mac):
+        # FIXME - implement! Need to check set of mac addresses specified by user, and see if any match the MAC
+        # passed in. It may make sense to build a hash table or other data structure from the set of addresses
+        # specified, and just do a quick lookup here, after converting the MAC passed in into the correct format.
+        return False
+ 
     def __ifaceDown(self, iface):
-        import os
         args = ''
         command = 'ifconfig'
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -374,7 +378,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 continue
 
     def __ifaceUp(self, iface, ip):
-        import os
         args = ''
         command = 'ifconfig'
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -394,23 +397,30 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         iface = self.__findIfaceByMac(mac)
         #print iface
 
+        if (iface == None):
+            self.log.warning("Could not find interface having MAC address " + str(mac) + " at this time.")
+            return    
+
+        if (self.__macDisabledByUser(mac)):
+            self.log.info("Interface " + iface + " having MAC address " + str(mac) + " is being ignored at user request.")
+            return
+
         #config iface
         if state == 'down':
             self.__ifaceDown(iface)
             pass
         elif state == 'up':
-            self.__ifaceUp(iface,ip)
+            self.__ifaceUp(iface, ip)
             pass
         elif state == 'user':
             #ignore because user is in control
             pass
         else:
-            #unkown state
+            #unknown state
             self.log.error("NEuca found unknown interface state: " + str(mac) + " " + str(state))
 
     def __checkISCSI_shouldFormat(self, device, fs_type):
         self.log.debug('__updateISCSI_shouldFormat(self, ' + device + ', ' + fs_type + ')')
-        import os
         current_fs_type=None
         args = ''
         command = 'blkid'
@@ -502,7 +512,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.log.debug('initiatorname (lines): ' + str(lines))
                           
         #stop open iscsi
-        import os
         args = ''
         command = self.iscsiInitScript
         exeExists=False
@@ -572,7 +581,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __ISCSI_discover(self, ip):
 	self.log.debug('__ISCSI_discover(self, ' + str(ip) )
-        import os
         args = ''
         command = 'iscsiadm'
         exeExists=False
@@ -716,7 +724,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_target_rescan(self, device, target, ip, port):
         self.log.debug('__updateISCSI_target_rescan(self, ' + str(device) +', ' + str(target)  + ')')
-        import os
         args = ''
         command = 'iscsiadm'
         exeExists=False
@@ -769,7 +776,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_format(self, device, fs_type, fs_options):
         self.log.debug('__updateISCSI_format(self, '+device+', ' + fs_type  + ', ' + fs_options + ')')
-        import os
         args = ''
         command = 'mkfs'
         exeExists=False
@@ -812,7 +818,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_mount(self, device, fs_type, mount_point):
         self.log.debug('__updateISCSI_mount(self, '+device+', ' + fs_type + ', ' + mount_point  + ')')
-        import os
         args = ''
         command = 'mount'
         exeExists=False
@@ -875,7 +880,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         f.close()
 
     def __addRoute(self,network, router):
-        import os
         args = ''
         command = 'ip'
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -891,7 +895,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 continue
 
     def __delRoute(self, network):
-        import os
         args = ''
         command = 'ip'
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -937,7 +940,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def updateNetworking(self):
         """
-        Add/remove newtork interfaces using ifconfig, etc. 
+        Add/remove network interfaces using ifconfig, etc. 
         """
         super(NEucaLinuxCustomizer, self).updateNetworking()
 
@@ -954,18 +957,18 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             except:
                 ip_type = None
                 ip = None
-            self.__updateInterface(mac,ip,state)
+            self.__updateInterface(mac, ip, state)
 
         #update routes
         self.__updateRouter(self.isRouter())
         routes = self.getAllRoutes()
         for route in routes:
-            self.__updateRoute(route[0],route[1])
+            self.__updateRoute(route[0], route[1])
     
     def runNewScripts(self):
         #self.userData.updateUserData()
         for i in  self.getAllScripts():
-            script = NeucaScript(i[0],i[1])
+            script = NeucaScript(i[0], i[1])
         
     def updateStorage(self):
         iscsi_iqn = self.getISCSI_iqn()
@@ -1108,6 +1111,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 os.system('/bin/hostname ' + str(new_hostname))
         except:
             self.log.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
+
+        # FIXME
+        try:
+            # Check if loopback address should be used for hostname here.
+            # Also validate that loopback address is in cidr range for loopback.
+        except:
+            # Any errors
 
     def updateUserData(self):
 	self.userData.updateUserData()
