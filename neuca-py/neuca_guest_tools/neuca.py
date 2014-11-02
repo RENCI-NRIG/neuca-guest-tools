@@ -64,6 +64,7 @@ CONFIG.set('logging', 'log-retain', neuca.__LogRetain__)
 CONFIG.set('logging', 'log-file-size', neuca.__LogFileSize__)
 
 LOGGER = 'neuca_guest_tools_logger'
+IPV4_LOOPBACK_NET = '127.0.0.0/8'
 
 # Temp function so I don't have to run it on a real VM
 def get_local_userdata():
@@ -1112,12 +1113,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         except:
             self.log.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
 
-        # FIXME
         try:
-            # Check if loopback address should be used for hostname here.
-            # Also validate that loopback address is in cidr range for loopback.
+            loopback_address = CONFIG.get('runtime', 'loopback-address')
+            if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
+                # FIXME - set hostname to match loopback_address in /etc/hosts
+                pass
         except:
-            # Any errors
+            # FIXME - handle any errors
 
     def updateUserData(self):
 	self.userData.updateUserData()
