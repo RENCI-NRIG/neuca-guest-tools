@@ -321,8 +321,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __init__(self, distro,iscsiInitScript):
         super(NEucaLinuxCustomizer, self).__init__(distro)        
-	self.iscsiInitScript = iscsiInitScript
-        self.storage_dir = CONFIG.get('runtime', 'state-directory') + '/storage'
+        self.iscsiInitScript = iscsiInitScript
+        self.storage_dir = neuca.__StorageDir__
 
     def __findIfaceByMac(self, mac):
         """ 

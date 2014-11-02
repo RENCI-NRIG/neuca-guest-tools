@@ -43,6 +43,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %attr(755, root, root) %dir /etc/neuca
 %attr(755, root, root) %dir /var/lib/neuca
+%attr(755, root, root) %dir /var/lib/neuca/storage
 %attr(755, root, root) %dir /var/log/neuca
 /etc/rc.d/init.d/neuca
 %{_bindir}/neuca*

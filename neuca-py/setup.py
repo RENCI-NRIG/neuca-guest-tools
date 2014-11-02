@@ -6,7 +6,7 @@ import distutils.log
 from distutils.core import setup
 from distutils.command.install import install
 from errno import EEXIST
-from neuca_guest_tools import __version__, __ConfDir__, __ConfFile__, __StateDir__, __LogDir__
+from neuca_guest_tools import __version__, __ConfDir__, __ConfFile__, __StateDir__, __StorageDir__, __LogDir__
 
 wrapper_script = 'neuca'
 wrapper_aliases = ['neuca-netconf', 'neuca-user-script', 'neuca-all-user-scripts',
@@ -41,5 +41,6 @@ setup(name = 'neuca_guest_tools',
       cmdclass = {"install": neuca_install},
       data_files = [(__ConfDir__, [__ConfFile__]),
                     (__StateDir__, []),
+                    (__StorageDir__, []),
                     (__LogDir__, [])]
 )

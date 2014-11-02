@@ -10,6 +10,7 @@ __SetLoopbackHostname__ = 'true'
 __LoopbackAddress__ = '127.255.255.1'
 
 __StateDir__ = '/var/lib/neuca'
+__StorageDir__ = __StateDir__ + '/storage'
 __PidFile__ = 'neucad.pid'
 
 __LogDir__ = '/var/log/neuca'
