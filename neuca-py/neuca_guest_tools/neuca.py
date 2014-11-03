@@ -278,6 +278,7 @@ class NEucaOSCustomizer(object):
     def __init__(self, distro):
         self.userData = NEucaUserData()
         self.log = logging.getLogger(LOGGER)
+        self.ignoredMacSet = set()
 
         #if self.userData.empty():
         #    self.log.warning("Unable to retrieve NEuca user data")
@@ -358,10 +359,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         return None
 
     def __macDisabledByUser(self, mac):
-        # FIXME - implement! Need to check set of mac addresses specified by user, and see if any match the MAC
-        # passed in. It may make sense to build a hash table or other data structure from the set of addresses
-        # specified, and just do a quick lookup here, after converting the MAC passed in into the correct format.
-        return False
+        return (mac in self.ignoredMacSet)
  
     def __ifaceDown(self, iface):
         args = ''
@@ -880,7 +878,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             self.log.info("Unknown Router value: " + str(isRtr))
         f.close()
 
-    def __addRoute(self,network, router):
+    def __addRoute(self, network, router):
         args = ''
         command = 'ip'
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -929,7 +927,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 return
             self.log.info('route up: ' + str(network) + " " + str(router))
             self.__delRoute(network)
-            self.__addRoute(network,router)
+            self.__addRoute(network, router)
 
     def __rescanPCI(self):
 	try:
@@ -1082,7 +1080,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     mount_point = None
             else:
                 self.log.error('Unknown storage protocol: ' + str(proto))
-                    
 
     def updateHostname(self):
         self.log.debug('updateHostname')
@@ -1113,16 +1110,24 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         except:
             self.log.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
 
-        try:
-            loopback_address = CONFIG.get('runtime', 'loopback-address')
-            if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
-                # FIXME - set hostname to match loopback_address in /etc/hosts
-                pass
-        except:
-            # FIXME - handle any errors
+        if (CONFIG.getboolean('runtime', 'set-loopback-hostname')):
+            try:
+                loopback_address = CONFIG.get('runtime', 'loopback-address')
+                if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
+                    # FIXME - set hostname to match loopback_address in /etc/hosts
+                    pass
+            except:
+                # FIXME - handle any errors
 
     def updateUserData(self):
 	self.userData.updateUserData()
+
+    def buildIgnoredMacSet(self):
+        mac_string = CONFIG.get('runtime', 'dataplane-macs-to-ignore')
+        mac_list = mac_string.split(",")
+        for mac in mac_list:
+            mac_cleaned = mac.lower.replace(':','')
+            self.ignoredMacSet.add(mac_cleaned)
         
     def getAllUserData(self):
         return self.userData.getAllUserData()
@@ -1213,6 +1218,7 @@ def main():
     }.get(neuca.__distro__, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(neuca.__distro__)
 
     customizer.updateUserData()
+    customizer.buildIgnoredMacSet()
 
     if invokeName == "neuca-netconf":
         customizer.updateNetworking()
