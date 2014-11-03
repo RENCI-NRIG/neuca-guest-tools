@@ -359,7 +359,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         return None
 
     def __macDisabledByUser(self, mac):
-        return (mac in self.ignoredMacSet)
+        mac_cleaned = mac.lower.replace(':','')
+        return (mac_cleaned in self.ignoredMacSet)
  
     def __ifaceDown(self, iface):
         args = ''
