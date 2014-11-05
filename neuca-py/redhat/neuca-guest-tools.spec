@@ -51,10 +51,21 @@ rm -rf %{buildroot}
 %{python_sitelib}/*.egg-info
 
 %post
-/sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
+if [ "$1" = "1" ]; then
+    /sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
+fi
 
 %preun
-/sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
+if [ "$1" = "0" ]; then
+    /sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
+    /bin/rm -rf /var/log/neuca/*
+    /bin/rm -rf /var/lib/neuca/storage/*
+    for i in /var/lib/neuca/*; do
+        if [ ! -d $i ]; then
+            /bin/rm -f $i
+        fi
+    done
+fi
 
 %changelog
 * Sat Nov 01 2014 Victor J. Orlikowski <vjo@duke.edu> - 1.5-1
