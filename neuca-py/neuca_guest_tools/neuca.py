@@ -957,23 +957,24 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         hostsEntries = list(fd)
         modified = False
 
+        neucaEntry = None
         try:
             neucaEntry = hostsEntries.index(startStr)
         except ValueError:
             pass
-        else:
-            newHostsEntry = loopbackAddress + "\t" + hostName
-            if neucaEntry:
-                if (hostsEntries[neucaEntry + 1] != newHostsEntry):
-                    hostsEntries[neucaEntry + 1] = newHostsEntry
-                    modified = True
-            else:
-                hostsEntries.append("\n")
-                hostsEntries.append(startStr)
-                hostsEntries.append(newHostsEntry)
-                hostsEntries.append(endStr)
-                hostsEntries.append("\n")
+
+        newHostsEntry = loopbackAddress + "\t" + hostName
+        if neucaEntry:
+            if (hostsEntries[neucaEntry + 1] != newHostsEntry):
+                hostsEntries[neucaEntry + 1] = newHostsEntry
                 modified = True
+        else:
+            hostsEntries.append("\n")
+            hostsEntries.append(startStr)
+            hostsEntries.append(newHostsEntry)
+            hostsEntries.append(endStr)
+            hostsEntries.append("\n")
+            modified = True
 
         if modified:
             try:
@@ -1161,6 +1162,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             loopback_address = CONFIG.get('runtime', 'loopback-address')
             if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
                 self.__updateHostsFile(loopback_address, new_hostname)
+            else:
+                self.log.warn('Specified address not in loopback range; address specified was: ' + loopback_address)
 
     def updateUserData(self):
 	self.userData.updateUserData()
