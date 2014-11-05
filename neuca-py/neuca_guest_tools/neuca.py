@@ -466,7 +466,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                                   str(device) + ', ' + str(fs_type))
                         return False
                 break
-            
         except Exception as e:
             self.log.error('Exception: Failed to test for device filesystem. ' +
                       'Cannot check for existing fs_type. Will not format disk (' + str(device) +
@@ -535,7 +534,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             if rtncode != 0:
                 self.log.error('rtncode: ' + str(rtncode) + 'Failed to shutdown open-iscsi with command: ' + str(cmd))
                 return None
-
         except Exception as e:
             self.log.error('Exception: Failed to shutdown open-iscsi with command: ' + str(cmd) + " " +
                       str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
@@ -570,7 +568,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             if rtncode != 0:
                 self.log.error('rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd))
                 return None
-
         except Exception as e:
             self.log.error('Exception: Failed to start open-iscsi with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return
@@ -809,7 +806,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     self.log.error('stdout: ' + str(data_stdout))
                     self.log.error('stderr: ' + str(data_stderr))
                     return
-
             except Exception as e:
                 self.log.error('Exception: Failed to format iSCSI targets for device (' + str(device) +
                           ') with command: ' + str(cmd) + " " + str(type(e)) + " : " + str(e) + "\n" +
@@ -859,7 +855,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 self.log.error('stdout: ' + str(data_stdout))
                 self.log.error('stderr: ' + str(data_stderr))
                 return
-            
         except Exception as e:
             self.log.error('Exception: Failed to mount iSCSI device (' + str(device) + ') with command: ' +
                       str(cmd) + " " + str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
@@ -1117,7 +1112,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     fd.write('mount_point = ' + str(mount_point) + '\n')
                     fd.write('mount_point = ' + str(mount_point) + '\n')
                     fd.close()
-
                 except Exception as e:
                     self.log.error('Exception in iSCSI storage: ' + str(e) + "\n" + str(type(e)) +
                               "\n" + str(traceback.format_exc()))
@@ -1135,7 +1129,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         #get the new hostname
         try:
             new_hostname = self.userData.getHostname()
-        except:
+        except Exception as e:
             self.log.error('Exception getting hostname.  Probably host_name field not in userdata file: ' +
                            str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
             self.log.error('Not setting hostname')
@@ -1155,7 +1149,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         try:
             if new_hostname != old_hostname:
                 os.system('/bin/hostname ' + str(new_hostname))
-        except:
+        except Exception as e:
             self.log.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
 
         if (CONFIG.getboolean('runtime', 'set-loopback-hostname')):
@@ -1347,7 +1341,7 @@ def main():
             files_read = CONFIG.read(config_file)
             if len(files_read)  == 0:
                 logging.warn("Configuration file could not be read; proceeding with default settings.")
-        except Exception, e:
+        except Exception as e:
             logging.error("Unable to parse configuration file \"%s\": %s"
                           % (config_file, str(e)))
             logging.error("Exiting...")
