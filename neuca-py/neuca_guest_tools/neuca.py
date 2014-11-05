@@ -1136,7 +1136,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             new_hostname = self.userData.getHostname()
         except:
             self.log.error('Exception getting hostname.  Probably host_name field not in userdata file: ' +
-                      str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
+                           str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc())  )
             self.log.error('Not setting hostname')
             return
         
@@ -1197,9 +1197,9 @@ class NEucad():
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/null'
         self.stderr_path = '/dev/null'
-        self.pidfile_path = CONFIG.get('runtime', 'state-directory') +
-                            '/' +
-                            CONFIG.get('runtime', 'pid-file')
+        self.pidfile_path = (CONFIG.get('runtime', 'state-directory') +
+                             '/' +
+                             CONFIG.get('runtime', 'pid-file'))
         self.pidfile_timeout = 5
         
         self.distro = neuca.__distro__
