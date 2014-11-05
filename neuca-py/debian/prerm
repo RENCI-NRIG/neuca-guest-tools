@@ -1,0 +1,11 @@
+#!/bin/sh
+if [ "$1" = "remove" ]; then
+    /etc/init.d/neuca stop
+    /bin/rm -rf /var/log/neuca/*
+    /bin/rm -rf /var/lib/neuca/storage/*
+    for i in /var/lib/neuca/*; do
+        if [ ! -d $i ]; then
+            /bin/rm -f $i
+        fi
+    done
+fi
