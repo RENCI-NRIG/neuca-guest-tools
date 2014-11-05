@@ -325,6 +325,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         super(NEucaLinuxCustomizer, self).__init__(distro)        
         self.iscsiInitScript = iscsiInitScript
         self.storage_dir = neuca.__StorageDir__
+        self.hostsFile = '/etc/hosts'
 
     def __findIfaceByMac(self, mac):
         """ 
@@ -359,7 +360,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         return None
 
     def __macDisabledByUser(self, mac):
-        mac_cleaned = mac.lower.replace(':','')
+        mac_cleaned = mac.lower.replace(':', '')
         return (mac_cleaned in self.ignoredMacSet)
  
     def __ifaceDown(self, iface):
@@ -938,6 +939,51 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 	except:
 	    self.log.error("failed to rescanPCI")
 
+    def __updateHostsFile(self, loopbackAddress, hostName):
+        """
+        Maintains the loopback entries added to /etc/hosts for novice users.
+        """
+        neucaStr = "NEuca loopback modifications - DO NOT EDIT BETWEEN THESE LINES. ###"
+        startStr = "### BEGIN " + neucaStr
+        endStr = "### END " + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.hostsFile, 'r+')
+        except:
+            self.log.error("Unable to open " + self.hostsFile + " for modifications!")
+            return
+
+        hostsEntries = list(fd)
+        modified = False
+
+        try:
+            neucaEntry = hostsEntries.index(startStr)
+        except ValueError:
+            pass
+        else:
+            newHostsEntry = loopbackAddress + "\t" + hostName
+            if neucaEntry:
+                if (hostsEntries[neucaEntry + 1] != newHostsEntry):
+                    hostsEntries[neucaEntry + 1] = newHostsEntry
+                    modified = True
+            else:
+                hostsEntries.append("\n")
+                hostsEntries.append(startStr)
+                hostsEntries.append(newHostsEntry)
+                hostsEntries.append(endStr)
+                hostsEntries.append("\n")
+                modified = True
+
+        if modified:
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in hostEntries:
+                    fd.write(line)
+            except:
+                self.log.error("Error writing modifications to " + self.hostsFile)
+
     def updateNetworking(self):
         """
         Add/remove network interfaces using ifconfig, etc. 
@@ -1112,22 +1158,19 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             self.log.error('Exception setting hostname: ' + str(e) + "\n" + str(type(e)) + "\n" + str(traceback.format_exc()))
 
         if (CONFIG.getboolean('runtime', 'set-loopback-hostname')):
-            try:
-                loopback_address = CONFIG.get('runtime', 'loopback-address')
-                if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
-                    # FIXME - set hostname to match loopback_address in /etc/hosts
-                    pass
-            except:
-                # FIXME - handle any errors
+            loopback_address = CONFIG.get('runtime', 'loopback-address')
+            if (all_matching_cidrs(loopback_address, [IPV4_LOOPBACK_NET])):
+                self.__updateHostsFile(loopback_address, new_hostname)
 
     def updateUserData(self):
 	self.userData.updateUserData()
 
     def buildIgnoredMacSet(self):
         mac_string = CONFIG.get('runtime', 'dataplane-macs-to-ignore')
+        mac_string = mac_string.replace(' ', '')
         mac_list = mac_string.split(",")
         for mac in mac_list:
-            mac_cleaned = mac.lower.replace(':','')
+            mac_cleaned = mac.lower.replace(':', '')
             self.ignoredMacSet.add(mac_cleaned)
         
     def getAllUserData(self):
