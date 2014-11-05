@@ -360,7 +360,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         return None
 
     def __macDisabledByUser(self, mac):
-        mac_cleaned = mac.lower.replace(':', '')
+        mac_cleaned = mac.lower().replace(':', '')
         return (mac_cleaned in self.ignoredMacSet)
  
     def __ifaceDown(self, iface):
@@ -1170,7 +1170,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         mac_string = mac_string.replace(' ', '')
         mac_list = mac_string.split(",")
         for mac in mac_list:
-            mac_cleaned = mac.lower.replace(':', '')
+            mac_cleaned = mac.lower().replace(':', '')
             self.ignoredMacSet.add(mac_cleaned)
         
     def getAllUserData(self):
@@ -1204,13 +1204,13 @@ class NEucad():
         
         self.distro = neuca.__distro__
         self.customizer = None
+        self.log = None
 
         # Need to ensure that the state directory is created,
         # so that the pidfile has somewhere to go.
         self.stateDir = CONFIG.get('runtime', 'state-directory')
         if not os.path.exists(self.stateDir):
             os.makedirs(self.stateDir)
-
 
     def run(self):
 	self.log.info('distro: ' + str(self.distro))
@@ -1345,6 +1345,7 @@ def main():
 
         app = NEucad()
         app.customizer = customizer
+        app.log = log
         daemon_runner = runner.DaemonRunner(app)
 
         if options.foreground:
@@ -1382,7 +1383,7 @@ def main():
 
             handler = logging.handlers.RotatingFileHandler(log_dir + '/' + CONFIG.get('logging', 'log-file'),
                                                            backupCount = CONFIG.getint('logging', 'log-retain'),
-                                                           maxBytes = CONFIG.getint('logging', 'log-size'))
+                                                           maxBytes = CONFIG.getint('logging', 'log-file-size'))
             handler.setLevel(getattr(logging, log_level))
             formatter = logging.Formatter(log_format)
             handler.setFormatter(formatter)
