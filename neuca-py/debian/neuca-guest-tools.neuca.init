@@ -27,9 +27,6 @@ LOGDIR=/var/log/$NAME
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
 
-# Exit if the package is not installed
-[ -x "$NEUCAD" ] || exit 0
-
 # Define LSB log_* functions.
 # Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
 . /lib/lsb/init-functions
