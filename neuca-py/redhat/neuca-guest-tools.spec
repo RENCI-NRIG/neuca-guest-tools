@@ -58,6 +58,7 @@ fi
 %preun
 if [ "$1" = "0" ]; then
     /sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
+    /etc/rc.d/init.d/neuca stop
     /bin/rm -rf /var/log/neuca/*
     /bin/rm -rf /var/lib/neuca/storage/*
     for i in /var/lib/neuca/*; do
