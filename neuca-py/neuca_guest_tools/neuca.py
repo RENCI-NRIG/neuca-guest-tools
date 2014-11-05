@@ -1328,8 +1328,16 @@ def main():
             parser.print_help()
             sys.exit(1)
 
+        initial_log_location = '/dev/tty'
+        try:
+            logfd = open(initial_log_location, 'r')
+        except:
+            initial_log_location = '/dev/null'
+        else:
+            logfd.close()
+
         log_format = '%(asctime)s - %(levelname)s - %(message)s'
-        logging.basicConfig(format=log_format, filename='/dev/tty')
+        logging.basicConfig(format=log_format, filename=initial_log_location)
 
         config_file = neuca.__ConfDir__ + '/' + neuca.__ConfFile__
         if options.config_file:
