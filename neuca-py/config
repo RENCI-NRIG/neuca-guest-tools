@@ -13,7 +13,7 @@
 ## This address *must* be in the 127.0.0.0/8 space; any other value will result in an error.
 #loopback-address = 127.255.255.1
 #
-## By default, neucad attempts to enforce the dataplane network configuration that an
+## By default, neucad attempts to enforce the dataplane network configuration that
 ## you may have specified. If, however, you wish to stop neucad from
 ## enforcing a particular configuration on a set of dataplane interfaces, you
 ## can provide a comma-separated list of MAC addresses for interfaces in the option below.
