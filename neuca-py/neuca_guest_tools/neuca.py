@@ -1175,6 +1175,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         for mac in mac_list:
             mac_cleaned = mac.lower().replace(':', '')
             self.ignoredMacSet.add(mac_cleaned)
+            self.log.debug('Adding MAC ' + str(mac) + 'to ignored list.')
         
     def getAllUserData(self):
         return self.userData.getAllUserData()
