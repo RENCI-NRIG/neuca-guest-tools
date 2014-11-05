@@ -52,7 +52,7 @@ if [ ! -d "$LOGDIR" ]; then
     exit 1
 fi
 
-if [ -x "$NEUCAD" ]; then
+if [ ! -x "$NEUCAD" ]; then
     echo "$NEUCAD missing; please check your installation!"
     exit 1
 fi
