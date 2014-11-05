@@ -1175,7 +1175,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         for mac in mac_list:
             mac_cleaned = mac.lower().replace(':', '')
             self.ignoredMacSet.add(mac_cleaned)
-            self.log.debug('Adding MAC ' + str(mac) + 'to ignored list.')
+            self.log.debug('Added MAC ' + str(mac) + ' to ignored list.')
         
     def getAllUserData(self):
         return self.userData.getAllUserData()
@@ -1207,8 +1207,8 @@ class NEucad():
         self.pidfile_timeout = 5
         
         self.distro = neuca.__distro__
+        self.log = logging.getLogger(LOGGER)
         self.customizer = None
-        self.log = None
 
         # Need to ensure that the state directory is created,
         # so that the pidfile has somewhere to go.
@@ -1217,7 +1217,8 @@ class NEucad():
             os.makedirs(self.stateDir)
 
     def run(self):
-	self.log.info('distro: ' + str(self.distro))
+        self.log.info('distro: ' + str(self.distro))
+        self.customizer.buildIgnoredMacSet()
 
         while True:
             try:
@@ -1266,7 +1267,6 @@ def main():
     }.get(neuca.__distro__, lambda x: sys.stderr.write("Distribution " + x + " not supported\n"))(neuca.__distro__)
 
     customizer.updateUserData()
-    customizer.buildIgnoredMacSet()
 
     if invokeName == "neuca-netconf":
         customizer.updateNetworking()
@@ -1349,7 +1349,6 @@ def main():
 
         app = NEucad()
         app.customizer = customizer
-        app.log = log
         daemon_runner = runner.DaemonRunner(app)
 
         if options.foreground:
