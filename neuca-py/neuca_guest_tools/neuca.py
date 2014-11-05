@@ -943,7 +943,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         """
         Maintains the loopback entries added to /etc/hosts for novice users.
         """
-        neucaStr = "NEuca loopback modifications - DO NOT EDIT BETWEEN THESE LINES. ###"
+        neucaStr = "NEuca loopback modifications - DO NOT EDIT BETWEEN THESE LINES. ###\n"
         startStr = "### BEGIN " + neucaStr
         endStr = "### END " + neucaStr
 
@@ -963,7 +963,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         except ValueError:
             pass
 
-        newHostsEntry = loopbackAddress + "\t" + hostName
+        newHostsEntry = loopbackAddress + "\t" + hostName + "\n"
         if neucaEntry:
             if (hostsEntries[neucaEntry + 1] != newHostsEntry):
                 hostsEntries[neucaEntry + 1] = newHostsEntry
@@ -980,7 +980,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             try:
                 fd.seek(0)
                 fd.truncate()
-                for line in hostEntries:
+                for line in hostsEntries:
                     fd.write(line)
             except:
                 self.log.error("Error writing modifications to " + self.hostsFile)
