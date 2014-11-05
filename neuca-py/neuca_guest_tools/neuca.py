@@ -1173,9 +1173,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         mac_string = mac_string.replace(' ', '')
         mac_list = mac_string.split(",")
         for mac in mac_list:
-            mac_cleaned = mac.lower().replace(':', '')
-            self.ignoredMacSet.add(mac_cleaned)
-            self.log.debug('Added MAC ' + str(mac) + ' to ignored list.')
+            if mac:
+                mac_cleaned = mac.lower().replace(':', '')
+                self.ignoredMacSet.add(mac_cleaned)
+                self.log.debug('Added MAC ' + str(mac) + ' to ignored list.')
         
     def getAllUserData(self):
         return self.userData.getAllUserData()
