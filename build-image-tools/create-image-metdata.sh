@@ -2,7 +2,7 @@
 
 #
 # Author: I.Baldine <ibaldin@renci.org> Copyright UNC-Chapel Hill/RENCI 2012
-#
+#         P.Ruth <pruth@renci.org>
 # The purpose of this script is to simplify the creation of image descriptor XML
 # files to be used with ImageProxy component of ExoGENI. 
 # Given a filesystem file and optionally a kernel and a ramdisk and an http:// prefix
