@@ -1079,9 +1079,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         self.log.debug("attaching lun for " + str(dev_name))
 
                         for target in targets:
-                            dev_path = '/dev/disk/by-path/ip-' + str(ip) + ':' + str(port) +
-                                       '-iscsi-' + str(target) +
-                                       '-lun-' + str(lun)
+                            dev_path = ('/dev/disk/by-path/ip-' + str(ip) + ':' + str(port) +
+                                        '-iscsi-' + str(target) +
+                                        '-lun-' + str(lun))
                             self.log.debug('dev_path = ' + dev_path)
 
                             # First, if the LUN has not been attached, attempt to attach it

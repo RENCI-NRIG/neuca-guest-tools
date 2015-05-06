@@ -61,8 +61,8 @@ rm -rf %{buildroot}
 %attr(755, root, root) %dir /var/lib/neuca
 %attr(755, root, root) %dir /var/lib/neuca/storage
 %attr(755, root, root) %dir /var/log/neuca
-/etc/rc.d/init.d/neuca
 %{_bindir}/neuca*
+/etc/neuca/config
 %{python_sitelib}/neuca_guest_tools
 %{python_sitelib}/*.egg-info
 %if %{use_systemd}
@@ -107,4 +107,3 @@ fi
 
 * Tue Dec 17 2013 Victor J. Orlikowski <vjo@duke.edu> - 1.4-1
 - 1.4 Initial packaging for RPM-based distributions
-
