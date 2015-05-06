@@ -1,6 +1,6 @@
 import platform
 
-__version__ = '1.5'
+__version__ = '1.6'
 __distro__ = platform.dist()[0]
 
 __ConfDir__ = '/etc/neuca'
