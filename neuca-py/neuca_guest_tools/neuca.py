@@ -56,6 +56,7 @@ CONFIG.set('runtime', 'set-loopback-hostname', neuca.__SetLoopbackHostname__)
 CONFIG.set('runtime', 'loopback-address', neuca.__LoopbackAddress__)
 CONFIG.set('runtime', 'dataplane-macs-to-ignore', '')
 CONFIG.set('runtime', 'state-directory', neuca.__StateDir__)
+CONFIG.set('runtime', 'pid-directory', neuca.__PidDir__)
 CONFIG.set('runtime', 'pid-file', neuca.__PidFile__)
 CONFIG.set('logging', 'log-directory', neuca.__LogDir__)
 CONFIG.set('logging', 'log-file', neuca.__LogFile__)
@@ -1210,10 +1211,13 @@ class NEucaDebianCustomizer(NEucaLinuxCustomizer):
 
 class NEucad():
     def __init__(self):
+        self.stateDir = CONFIG.get('runtime', 'state-directory')
+        self.pidDir = CONFIG.get('runtime', 'pid-directory')
+
         self.stdin_path = '/dev/null'
         self.stdout_path = '/dev/null'
         self.stderr_path = '/dev/null'
-        self.pidfile_path = (CONFIG.get('runtime', 'state-directory') +
+        self.pidfile_path = (self.pidDir +
                              '/' +
                              CONFIG.get('runtime', 'pid-file'))
         self.pidfile_timeout = 5
@@ -1222,11 +1226,13 @@ class NEucad():
         self.log = logging.getLogger(LOGGER)
         self.customizer = None
 
-        # Need to ensure that the state directory is created,
-        # so that the pidfile has somewhere to go.
-        self.stateDir = CONFIG.get('runtime', 'state-directory')
+        # Need to ensure that the state directory is created.
         if not os.path.exists(self.stateDir):
             os.makedirs(self.stateDir)
+
+        # Ditto for PID directory.
+        if not os.path.exists(self.pidDir):
+            os.makedirs(self.pidDir)
 
     def run(self):
         self.log.info('distro: ' + str(self.distro))
