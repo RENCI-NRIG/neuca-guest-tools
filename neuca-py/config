@@ -25,6 +25,10 @@
 ## This directory will be automatically created if it does not exist.
 #state-directory = /var/lib/neuca
 #
+## The directory into which neucad should write the PID file corresponding to itself.
+## This directory will be automatically created if it does not exist.
+#pid-directory = /var/run
+#
 ## The filename to be used for neucad's PID lockfile
 #pid-file = neucad.pid
 
