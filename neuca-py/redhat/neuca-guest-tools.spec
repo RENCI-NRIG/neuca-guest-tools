@@ -48,6 +48,7 @@ install -d -m 755 %{buildroot}/var/log/neuca
 %{__mkdir} -p %{buildroot}%{_unitdir}
 %{__install} -m 644 neucad.service %{buildroot}%{_unitdir}/neucad.service
 %else
+%{__mkdir} -p %{buildroot}%{_initrddir}
 %{__install} -m 755 redhat/neuca.init %{buildroot}%{_initrddir}/neuca
 %endif
 
