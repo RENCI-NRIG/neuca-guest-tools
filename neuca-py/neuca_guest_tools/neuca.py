@@ -577,8 +577,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             self.log.debug('Removing file: ' + str(f))
             os.remove(self.storage_dir + f)
 
-    def __ISCSI_discover(self, ip):
-	self.log.debug('__ISCSI_discover(self, ' + str(ip) )
+
+    def __ISCSI_discover(self, ip, port):
+        self.log.debug('__ISCSI_discover(self, ' + str(ip) )
+        import os
         args = ''
         command = 'iscsiadm'
         exeExists=False
@@ -589,7 +591,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             else:
                 exeExists=True
                 break
-            
+
         if not exeExists:
             self.log.error('iSCSI executable iscsiadm does not exist in paths ., /bin, or /usr/bin')
             return None
@@ -604,24 +606,21 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
             self.log.debug('Targets: ' + str(data_stdout))
         except Exception as e:
-            self.log.error('Exception: Failed to discover iSCSI targets for device with command: ' +
-                           str(cmd) + " " +
-                           str(type(e)) + " : " +
-                           str(e) + "\n" + str(traceback.format_exc()))
+            self.log.error('Exception: Failed to discover iSCSI targets for device with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return None
-	
-	lines = data_stdout.split('\n')
+
+        targets = []
+        lines = data_stdout.split('\n')
         for line in lines:
             if line.strip().startswith(str(ip)):
-		line_split = line.split()
-		self.log.debug('line_split: ' + str(line_split))
-		if len(line_split) >= 2:
-                    target = line_split[1].strip()
-                    self.log.debug('return target: ' + target)
-                    return target
-                
-        self.log.debug('return target: None')
-	return None
+                line_split = line.split()
+                self.log.debug('line_split: ' + str(line_split))
+                if len(line_split) >= 2 and line_split[0].startswith(str(ip) + ':' + str(port)):
+                    targets.append(line_split[1].strip())
+                    self.log.debug('adding target: ' + str(line_split[1].strip()))
+
+        self.log.debug('return targets: ' + str(targets))
+        return targets
 
     def __updateISCSI_attach(self, device, target, ip, port, chap_user, chap_pass):
         self.log.debug('__updateISCSI_target_login(self, ' + str(device) + ', ' + str(target) +
@@ -1035,10 +1034,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     ip = device[1].split(':')[1]
                     port = device[1].split(':')[2]
                     #target = device[1].split(':')[3]
-                    target = self.__ISCSI_discover(ip)
-                    if target == None:
+                    targets = self.__ISCSI_discover(ip,port)
+                    if len(targets) < 1:
                         self.log.error('Exception: Failed to discover iSCSI targets for device (' + str(ip) + ')')
-                        target == 'Failed to discover iSCSI'
+                        targets == 'Failed to discover iSCSI'
 
                     lun = device[1].split(':')[3]
                     chap_user = device[1].split(':')[4]
@@ -1062,7 +1061,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
                     self.log.debug('ip = ' + str(ip))
                     self.log.debug('port = ' +str(port))
-                    self.log.debug('target = ' +str(target))
+                    self.log.debug('target = ' +str(targets))
                     self.log.debug('lun = ' +str(lun))
                     self.log.debug('chap_user = ' +str(chap_user))
                     self.log.debug('chap_pass = ' +str(chap_pass))
@@ -1072,28 +1071,43 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     self.log.debug('fs_shouldFormat = ' + str(fs_shouldFormat))
                     self.log.debug('mount_point = ' + str(mount_point))
                 
-                    device = '/dev/disk/by-path/ip-' + str(ip) + ':' + str(port) + '-iscsi-' + str(target) + '-lun-' + str(lun)
+                    #device = '/dev/disk/by-path/ip-' + str(ip) + ':' + str(port) + '-iscsi-' + str(target) + '-lun-' + str(lun)
 
-                    self.log.debug('device = ' + device)
+                    #self.log.debug('device = ' + device)
 
+                    target = ''
+                    dev_path = ''
                     if shouldAttach.lower() == 'yes':
-                        self.log.debug("attaching lun")
-                        if not os.path.exists(device):
-                            #self.__updateISCSI_target_rescan(device, target, ip, port)
-                            self.__updateISCSI_attach(device, target, ip, port, chap_user, chap_pass)
-                        if fs_shouldFormat.lower() == 'yes' and self.__checkISCSI_shouldFormat(device, fs_type):
-                            self.log.debug("formatting fs")
-                            self.__updateISCSI_format(device,fs_type,fs_options)
-                            pass
-                        if not mount_point == None:
-                            self.log.debug("mounting fs")
-                            self.__updateISCSI_mount(device, fs_type, mount_point)
-                            pass
-                    
-                    if not os.path.exists(device):
-                        self.log.error('iSCSI storage failed.  Device not attached.  Retry next loop')
-                        return
-                    
+                        self.log.debug("attaching lun for " + str(dev_name))
+
+                        for target in targets:
+                            dev_path = '/dev/disk/by-path/ip-' + str(ip) + ':' + str(port) + '-iscsi-' + str(target) + '-lun-' + str(lun)
+                            self.log.debug('dev_path = ' + dev_path)
+
+                            if not os.path.exists(dev_path):
+                                #self.__updateISCSI_target_rescan(device, target, ip, port)
+                                self.__updateISCSI_attach(dev_path, target, ip, port, chap_user, chap_pass)
+
+                            #check if the lun in in this target
+                            if not os.path.exists(dev_path):
+                                continue
+
+                            if fs_shouldFormat.lower() == 'yes' and self.__checkISCSI_shouldFormat(dev_path, fs_type):
+                                self.log.debug("formatting fs")
+                                self.__updateISCSI_format(dev_path,fs_type,fs_options)
+                                pass
+                            if not mount_point == None:
+                                self.log.debug("mounting fs")
+                                self.__updateISCSI_mount(dev_path, fs_type, mount_point)
+                                pass
+                            break
+
+                        if not os.path.exists(dev_path):
+                            self.log.error('iSCSI storage failed.  Device ' + str(dev_name)  +  ' not attached.  Retry next loop')
+                            continue
+                    else:
+                        self.log.debug("Not attaching lun for " + str(dev_name))
+
                     #mark storage device handled
                     if not os.path.exists(self.storage_dir):
                         os.makedirs(self.storage_dir)
@@ -1103,8 +1117,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     fd.write('port = ' +str(port) + '\n')
                     fd.write('target = ' +str(target) + '\n')
                     fd.write('lun = ' +str(lun) + '\n')
-                    fd.write('target = ' +str(chap_user))
-                    fd.write('lun = ' +str(chap_pass))
+                    fd.write('chap_user = ' +str(chap_user))
+                    fd.write('chap_pss = ' +str(chap_pass))
                     fd.write('shouldAttach = ' + str(shouldAttach) + '\n')
                     fd.write('fs_type = ' + str(fs_type) + '\n')
                     fd.write('fs_options = ' + str(fs_options) + '\n')
@@ -1112,6 +1126,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     fd.write('mount_point = ' + str(mount_point) + '\n')
                     fd.write('mount_point = ' + str(mount_point) + '\n')
                     fd.close()
+
                 except Exception as e:
                     self.log.error('Exception in iSCSI storage: ' + str(e) + "\n" + str(type(e)) +
                               "\n" + str(traceback.format_exc()))
@@ -1122,6 +1137,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     mount_point = None
             else:
                 self.log.error('Unknown storage protocol: ' + str(proto))
+
+
 
     def updateHostname(self):
         self.log.debug('updateHostname')
