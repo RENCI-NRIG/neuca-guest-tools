@@ -43,7 +43,7 @@ from os import kill
 from signal import alarm, signal, SIGALRM, SIGKILL
 from subprocess import PIPE, Popen
 from optparse import OptionParser
-from daemon import runner, pidlockfile
+from daemon import runner
 from lockfile import LockTimeout
 
 """ This script performs distribution-specific customization at boot-time
