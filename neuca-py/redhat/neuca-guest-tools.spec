@@ -5,7 +5,7 @@
 
 Name:           neuca-guest-tools
 Version:        1.6
-Release:        1
+Release:        1%{?dist}
 Summary:        NEuca - the ExoGENI VM post-boot configuration utility
 
 Group:          Applications/System
