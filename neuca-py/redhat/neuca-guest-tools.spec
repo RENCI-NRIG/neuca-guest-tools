@@ -74,7 +74,7 @@ rm -rf %{buildroot}
 %post
 if [ "$1" = "1" ]; then
 %if %use_systemd
-    /usr/bin/systemctl preset neucad.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl enable neucad.service >/dev/null 2>&1 ||:
 %else
     /sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
 %endif
