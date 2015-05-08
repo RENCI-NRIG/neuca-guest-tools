@@ -322,7 +322,7 @@ class NEucaOSCustomizer(object):
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
     """Linux customizer """
 
-    def __init__(self, distro,iscsiInitScript):
+    def __init__(self, distro, iscsiInitScript):
         super(NEucaLinuxCustomizer, self).__init__(distro)        
         self.iscsiInitScript = iscsiInitScript
         self.storage_dir = neuca.__StorageDir__
@@ -424,7 +424,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
     def __checkISCSI_shouldFormat(self, device, fs_type):
         self.log.debug('__updateISCSI_shouldFormat(self, ' + device + ', ' + fs_type + ')')
         current_fs_type=None
-        args = ''
         command = 'blkid'
         exeExists=False
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -441,8 +440,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             return False
 
         try:
-            cmd = [ str(executable),  str(device) ]
-            rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
+            cmd = [ str(executable), str(device) ]
+            rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
 
             if rtncode == 2:
                 #disk unformated
@@ -513,10 +512,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.log.debug('initiatorname (lines): ' + str(lines))
                           
         #stop open iscsi
-        args = ''
-        command = self.iscsiInitScript
+        command = 'service'
         exeExists=False
-        for dir in ['', '/etc/init.d']:
+        for dir in ['', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
@@ -525,13 +523,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 break
 
         if not exeExists:
-            self.log.error('iscsi init.d script '+ str(self.iscsiInitScript)  +  ' does not exist in paths ., /etc/init.d')
+            self.log.error('Unable to find service utility to run ' + str(self.iscsiInitScript)  +  ' service.')
             return
 
         try:
-            #/etc/init.d/open-iscsi stop                                                                                                                                                                                  
-            cmd = [ str(executable), "stop" ]
-            rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
+            # Stop iSCSI
+
+            cmd = [ str(executable), self.iscsiInitScript, "stop" ]
+            rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
                 self.log.error('rtncode: ' + str(rtncode) + 'Failed to shutdown open-iscsi with command: ' + str(cmd))
                 return None
@@ -546,26 +545,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             f.write(str(line) + '\n')
         f.close()
 
-        #start open iscsi
-        args = ''
-        command = self.iscsiInitScript
-        exeExists=False
-        for dir in ['', '/etc/init.d']:
-            executable = os.path.join(dir, command)
-            if not os.path.exists(executable):
-                continue
-            else:
-                exeExists=True
-                break
-
-        if not exeExists:
-            self.log.error('open-iscsi init.d script does not exist in paths ., /etc/init.d')
-            return
-
         try:
-            #/etc/init.d/open-iscsi start
-            cmd = [ str(executable), "start" ]
-            rtncode,data_stdout,data_stderr = Commands.run(cmd, timeout=60)
+            # Start iSCSI
+            cmd = [ str(executable), self.iscsiInitScript, "start" ]
+            rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
                 self.log.error('rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd))
                 return None
@@ -580,7 +563,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __ISCSI_discover(self, ip, port):
         self.log.debug('__ISCSI_discover(self, ' + str(ip) )
-        args = ''
         command = 'iscsiadm'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
@@ -627,7 +609,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
     def __updateISCSI_attach(self, device, target, ip, port, chap_user, chap_pass):
         self.log.debug('__updateISCSI_target_login(self, ' + str(device) + ', ' + str(target) +
                   ', ' + str(ip)  + ', ' + str(port) +')')
-        args = ''
         command = 'iscsiadm'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
@@ -723,7 +704,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_target_rescan(self, device, target, ip, port):
         self.log.debug('__updateISCSI_target_rescan(self, ' + str(device) +', ' + str(target)  + ')')
-        args = ''
         command = 'iscsiadm'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
@@ -775,7 +755,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_format(self, device, fs_type, fs_options):
         self.log.debug('__updateISCSI_format(self, '+device+', ' + fs_type  + ', ' + fs_options + ')')
-        args = ''
         command = 'mkfs'
         exeExists=False
         for dir in ['', '/sbin/', '/usr/sbin']:
@@ -816,7 +795,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
     def __updateISCSI_mount(self, device, fs_type, mount_point):
         self.log.debug('__updateISCSI_mount(self, '+device+', ' + fs_type + ', ' + mount_point  + ')')
-        args = ''
         command = 'mount'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
@@ -1199,14 +1177,17 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
 class NEucaRedhatCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsi')
-        #self.iscsiInitScript='iscsi'
+        import platform
+        distro_version = int(platform.dist()[1])
+        if ((distro == 'fedora') and (distro_version >= 15)) or (((distro == 'redhat') or (distro == 'centos')) and (distro_version >= 7)):
+            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsid')
+        else:
+            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsi')
 
 
 class NEucaDebianCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
         super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi')
-        #self.iscsiInitScript='open-iscsi'
 
 
 class NEucad():
