@@ -562,7 +562,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             os.remove(self.storage_dir + f)
 
     def __ISCSI_discover(self, ip, port):
-        self.log.debug('__ISCSI_discover(self, ' + str(ip) )
+        self.log.debug('__ISCSI_discover(self, ' + str(ip) + ')')
         command = 'iscsiadm'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
@@ -1015,9 +1015,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     port = device[1].split(':')[2]
                     #target = device[1].split(':')[3]
                     targets = self.__ISCSI_discover(ip, port)
-                    if len(targets) < 1:
+                    if not targets or len(targets) < 1:
                         self.log.error('Exception: Failed to discover iSCSI targets for device (' + str(ip) + ')')
-                        targets == 'Failed to discover iSCSI'
+                        targets = 'Failed to discover iSCSI'
 
                     lun = device[1].split(':')[3]
                     chap_user = device[1].split(':')[4]
