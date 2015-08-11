@@ -202,10 +202,11 @@ class NEucaData(object):
 
         data_source = userData.get("global","data_source")
         
+        print "data_source: " + str(data_source)
+        
         if data_source == "userdata":
             return userData
         elif data_source == "comet":
-            
             return NEucaCometData(userData)
         else:
             return userData
