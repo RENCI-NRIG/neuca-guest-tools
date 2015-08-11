@@ -265,13 +265,14 @@ class NEucaData(object):
     
 
 class NEucaCometData(NEucaData):
-    def __init__(self):
+    def __init__(self, userdata):
         self.__data=None
         
         self.log = logging.getLogger(LOGGER)
 
         #get cred paths and ids from userdata file
-        self.userData = NEucaUserData()
+        #self.userData = NEucaUserData()
+        self.userData = userdata
         self.userData.update()
 
         
