@@ -200,7 +200,7 @@ class NEucaData(object):
         userData = NEucaUserData()
         userData.update()
 
-        data_source = userData.get("global","data_source")
+        data_source = userData.get("global","neuca_data_source")
         
         print "data_source: " + str(data_source)
         
