@@ -195,7 +195,7 @@ class NEucaData(object):
     __metaclass__ = abc.ABCMeta
 
     @classmethod
-    def createNEucaData(self):
+    def create():
         #get cred paths and ids from userdata file
         userData = NEucaUserData()
         userData.update()
@@ -205,6 +205,7 @@ class NEucaData(object):
         if data_source == "userdata":
             return userData
         elif data_source == "comet":
+            
             return NEucaCometData(userData)
         else:
             return userData
@@ -271,19 +272,21 @@ class NEucaCometData(NEucaData):
         #get cred paths and ids from userdata file
         self.userData = NEucaUserData()
         self.userData.update()
-    
+
+        
+        
         self.sliceID = self.userData.get("global","slice_id")
         self.reservationID = self.userData.get("global","reservation_id")
-        self.comet_vm_properties_path = self.userData.get("global","comet_vm_properties_path")
-        self.comet_vm_keystore_path = self.userData.get("global","comet_vm_keystore_path")
-        self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore_path")
+        self.comet_vm_properties_path = self.userData.get("global","comet_vm_properties")
+        self.comet_vm_keystore_path = self.userData.get("global","comet_vm_keystore")
+        self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore")
 
         #decode creds from base64
         self.log.info("self.sliceID: " + str(self.sliceID))
         self.log.info("self.reservationID: " + str(self.reservationID))
-        self.log.info("self.comet_vm_properties_path: " + str(self.comet_vm_properties_path))
-        self.log.info("self.comet_vm_keystore_path: " + str(self.comet_vm_keystore_path))
-        self.log.info("self.comet_vm_truststore_path: " + str(self.comet_vm_truststore_path))
+        self.log.info("self.comet_vm_properties: " + str(self.comet_vm_properties_path))
+        self.log.info("self.comet_vm_keystore: " + str(self.comet_vm_keystore_path))
+        self.log.info("self.comet_vm_truststore: " + str(self.comet_vm_truststore_path))
 
         
 
@@ -407,7 +410,8 @@ class NEucaUserData(NEucaData):
 class NEucaOSCustomizer(object):
     """Generic OS customizer """
     def __init__(self, distro):
-        self.userData = NEucaUserData()
+        #self.userData = NEucaUserData()
+        self.userData = NEucaData.create()
         self.log = logging.getLogger(LOGGER)
         self.ignoredMacSet = set()
 
