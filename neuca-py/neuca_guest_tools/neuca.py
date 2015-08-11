@@ -331,6 +331,9 @@ class NEucaCometData(NEucaData):
     def empty(self):
         return
 
+    def getAllUserData(self):
+        return "NEucaCometData.getAllUserData NOT IMPLEMENTED"
+
 
 
 class NEucaUserData(NEucaData):
