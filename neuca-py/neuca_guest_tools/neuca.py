@@ -195,7 +195,7 @@ class NEucaData(object):
     __metaclass__ = abc.ABCMeta
 
     @classmethod
-    def create():
+    def create(self):
         #get cred paths and ids from userdata file
         userData = NEucaUserData()
         userData.update()
