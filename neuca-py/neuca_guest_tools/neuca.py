@@ -318,9 +318,11 @@ class NEucaCometData(NEucaData):
             cmd = [ str(executable), "-jar", comet_jar, "-configFile", self.comet_vm_properties_path , "-getHostname" , self.sliceID , self.reservationID ]
             rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
+                print 'rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)
                 #self.log.error('rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd))
                 return None
         except Exception as e:
+            print 'Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc())
             #self.log.error('Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))
             return
 
