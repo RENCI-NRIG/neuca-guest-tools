@@ -284,11 +284,17 @@ class NEucaCometData(NEucaData):
         self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore")
 
         #decode creds from base64
-        self.log.info("self.sliceID: " + str(self.sliceID))
-        self.log.info("self.reservationID: " + str(self.reservationID))
-        self.log.info("self.comet_vm_properties: " + str(self.comet_vm_properties_path))
-        self.log.info("self.comet_vm_keystore: " + str(self.comet_vm_keystore_path))
-        self.log.info("self.comet_vm_truststore: " + str(self.comet_vm_truststore_path))
+        #self.log.info("self.sliceID: " + str(self.sliceID))
+        #self.log.info("self.reservationID: " + str(self.reservationID))
+        #self.log.info("self.comet_vm_properties: " + str(self.comet_vm_properties_path))
+        #self.log.info("self.comet_vm_keystore: " + str(self.comet_vm_keystore_path))
+        #self.log.info("self.comet_vm_truststore: " + str(self.comet_vm_truststore_path))
+
+        print "self.sliceID: " + str(self.sliceID)
+        print "self.reservationID: " + str(self.reservationID)
+        print "self.comet_vm_properties: " + str(self.comet_vm_properties_path)
+        print "self.comet_vm_keystore: " + str(self.comet_vm_keystore_path)
+        print "self.comet_vm_truststore: " + str(self.comet_vm_truststore_path)
 
         
 
