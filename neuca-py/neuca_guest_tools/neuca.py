@@ -32,6 +32,8 @@ import re
 import socket
 import time
 
+import abc
+
 import neuca_guest_tools as neuca
 
 import logging, logging.handlers
@@ -187,27 +189,154 @@ class NeucaScript:
             except IOError:
                 pass
 
+#abstract class for data 
+class NEucaData(object):
+    __metaclass__ = abc.ABCMeta
 
-class NEucaUserData(object):
+    @classmethod
+    def createNEucaData(self):
+        #get cred paths and ids from userdata file
+        userData = NEucaUserData()
+        userData.update()
+
+        data_source = userData.get("global","data_source")
+        
+        if data_source == "userdata":
+            return userData
+        elif data_source == "comet":
+            return NEucaCometData(userData)
+        else:
+            return userData
+
+    @abc.abstractmethod
+    def update(self):
+        return
+
+    @abc.abstractmethod
+    def get(self, section, field):
+        return
+
+    @abc.abstractmethod
+    def getBootScript(self):
+        return
+    
+    @abc.abstractmethod
+    def getAllScripts(self):
+        return
+
+    @abc.abstractmethod
+    def getInterface(self, iface):
+        return
+
+    @abc.abstractmethod
+    def getAllInterfaces(self):
+        return
+
+    @abc.abstractmethod
+    def getAllStorage(self):
+        return
+
+    @abc.abstractmethod
+    def getAllScripts(self):
+        return
+
+    @abc.abstractmethod
+    def getAllRoutes(self):
+        return
+
+    @abc.abstractmethod
+    def isRouter(self):
+        return
+
+    @abc.abstractmethod
+    def getISCSI_iqn(self):
+        return
+
+    @abc.abstractmethod
+    def getHostname(self):
+        return
+
+    @abc.abstractmethod
+    def empty(self):
+        return
+    
+
+class NEucaCometData(NEucaDataInterface):
+    def __init__(self):
+        self.__data=None
+        
+        self.log = logging.getLogger(LOGGER)
+
+        #get cred paths and ids from userdata file
+        self.userData = NEucaUserData()
+        self.userData.update()
+    
+        self.sliceID = self.userData.get("global","slice_id")
+        self.reservationID = self.userData.get("global","reservation_id")
+        self.comet_vm_properties_path = self.userData.get("global","comet_vm_properties_path")
+        self.comet_vm_keystore_path = self.userData.get("global","comet_vm_keystore_path")
+        self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore_path")
+
+        #decode creds from base64
+        self.log.info("self.sliceID: " + str(self.sliceID))
+        self.log.info("self.reservationID: " + str(self.reservationID))
+        self.log.info("self.comet_vm_properties_path: " + str(self.comet_vm_properties_path))
+        self.log.info("self.comet_vm_keystore_path: " + str(self.comet_vm_keystore_path))
+        self.log.info("self.comet_vm_truststore_path: " + str(self.comet_vm_truststore_path))
+
+        
+
+    def update(self):
+        return
+
+    def get(self, section, field):
+        return
+
+    def getBootScript(self):
+        return
+
+    def getAllScripts(self):
+        return
+
+    def getInterface(self, iface):
+        return
+
+    def getAllInterfaces(self):
+        return
+
+    def getAllStorage(self):
+        return
+
+    def getAllScripts(self):
+        return
+
+    def getAllRoutes(self):
+        return
+
+    def isRouter(self):
+        return
+
+    def getISCSI_iqn(self):
+        return
+
+    def getHostname(self):
+        return
+
+    def empty(self):
+        return
+
+
+
+class NEucaUserData(NEucaDataInterface):
     def __init__(self):
 	self.userData=None
-        # TODO:  change back for real VM 
-        #self.userData=boto.utils.get_instance_userdata()
-        
-        #fh = TempFile(prefix='euca-n-userdata')
-        #fh.write(self.userData)
-        #fh.close()
-        
-        #self.config = ConfigParser.RawConfigParser()
-        #self.config.read(fh.path)
-	pass
 
-    def updateUserData(self):
+    def update(self):
         # TODO:  change back for real VM 
         self.userData=boto.utils.get_instance_userdata() 
         #self.userData=get_local_userdata()
 
-        fh = TempFile(prefix='euca-n-userdata')
+        fh = TempFile(prefix='neuca-userdata')
         fh.write(self.userData)
         fh.close()
 
@@ -1156,7 +1285,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 self.log.warn('Specified address not in loopback range; address specified was: ' + loopback_address)
 
     def updateUserData(self):
-	self.userData.updateUserData()
+	self.userData.update()
 
     def buildIgnoredMacSet(self):
         mac_string = CONFIG.get('runtime', 'dataplane-macs-to-ignore')
