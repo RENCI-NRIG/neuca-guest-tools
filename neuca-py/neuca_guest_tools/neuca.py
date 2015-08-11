@@ -23,6 +23,7 @@ import os
 import tempfile
 import stat
 import subprocess
+import string
 
 import boto.utils
 import ConfigParser
@@ -1307,7 +1308,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 class NEucaRedhatCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
         import platform
-        distro_version = int(float(platform.dist()[1]))
+        distro_version = int(platform.dist()[1].split('.')[0])
         if ((distro == 'fedora') and (distro_version >= 15)) or (((distro == 'redhat') or (distro == 'centos')) and (distro_version >= 7)):
             super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsid')
         else:
