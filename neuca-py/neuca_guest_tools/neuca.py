@@ -261,7 +261,7 @@ class NEucaData(object):
         return
     
 
-class NEucaCometData(NEucaDataInterface):
+class NEucaCometData(NEucaData):
     def __init__(self):
         self.__data=None
         
@@ -327,7 +327,7 @@ class NEucaCometData(NEucaDataInterface):
 
 
 
-class NEucaUserData(NEucaDataInterface):
+class NEucaUserData(NEucaData):
     def __init__(self):
 	self.userData=None
 
