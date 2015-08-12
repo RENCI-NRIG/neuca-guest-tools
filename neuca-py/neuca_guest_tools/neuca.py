@@ -450,6 +450,7 @@ class NEucaCometData(NEucaData):
         return None
 
     def getAllUserData(self):
+        self.getHostname()
         return None
         return "NEucaCometData.getAllUserData NOT IMPLEMENTED"
 
