@@ -390,6 +390,51 @@ class NEucaCometData(NEucaData):
         return None
 
     def getAllInterfaces(self):
+        command = 'java'
+        exeExists=False
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
+            executable = os.path.join(dir, command)
+            if not os.path.exists(executable):
+                continue
+            else:
+                exeExists=True
+                break
+
+            if not exeExists:
+                return None
+
+        comet_jar="/root/comet.jar"
+        try:
+            cmd = [ str(executable), "-jar", comet_jar, "-configFile", self.comet_vm_properties_path , "-getIfces" , self.sliceID , self.reservationID ]
+            rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
+            if rtncode != 0:
+                print 'rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)
+                return None
+
+            except Exception as e:
+            print 'Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc())
+            return
+
+        print "cmd: " + str(cmd)
+        print "rtncode: " + str(rtncode)
+        print "data_stdout: " + str(data_stdout)
+        print "data_stderr: " + str(data_stderr)
+
+
+        #Parse the result 
+        hostname=None
+        lines = data_stdout.split('\n')
+
+        for line in lines:
+            line = line.split()
+            if len(line) >= 2 and line[0].strip() == 'Value:':
+                        hostname=line[1].strip()
+
+        print "RETURNING hostname = " + hostname
+
+        return hostname
+
+
         return None
 
     def getAllStorage(self):
@@ -462,7 +507,7 @@ class NEucaCometData(NEucaData):
         return None
 
     def getAllUserData(self):
-        self.getHostname()
+        self.getAllInterfaces()
         return None
         return "NEucaCometData.getAllUserData NOT IMPLEMENTED"
 
