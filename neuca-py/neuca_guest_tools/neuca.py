@@ -411,7 +411,7 @@ class NEucaCometData(NEucaData):
                 print 'rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)
                 return None
 
-            except Exception as e:
+        except Exception as e:
             print 'Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc())
             return
 
