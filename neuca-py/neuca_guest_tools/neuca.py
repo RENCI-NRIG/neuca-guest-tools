@@ -454,6 +454,8 @@ class NEucaCometData(NEucaData):
             if len(line) >= 2 and line[0].strip() == 'Value:':
                 hostname=line[1].strip()
 
+        print "RETURNING hostname = " + hostname
+
         return hostname
 
     def empty(self):
