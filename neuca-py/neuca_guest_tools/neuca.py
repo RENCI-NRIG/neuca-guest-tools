@@ -298,7 +298,7 @@ class NEucaCometData(NEucaData):
         self.__decode_keystores()
 
     def __decode_keystores(self):
-        keystore64_path = self.comet_vm_keystore
+        keystore64_path = self.comet_vm_keystore_path
         truststore64_path = self.comet_vm_truststore_path
         
         keystore_path = re.sub(r"/.base64$", "", keystore64_path)
