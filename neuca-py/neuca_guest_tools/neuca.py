@@ -449,7 +449,7 @@ class NEucaCometData(NEucaData):
         #return hostname
 
 
-        return ifaces_rtn[]
+        return ifaces_rtn
 
     def getAllStorage(self):
         return None
