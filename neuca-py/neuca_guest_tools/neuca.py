@@ -407,7 +407,7 @@ class NEucaCometData(NEucaData):
                 continue
             else:
                 exeExists=True
-                        break
+                break
 
             if not exeExists:
             #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`   
