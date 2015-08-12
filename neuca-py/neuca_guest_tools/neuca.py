@@ -410,8 +410,8 @@ class NEucaCometData(NEucaData):
                 break
 
             if not exeExists:
-            #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`   
-            return None
+                #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`   
+                return None
 
 
         comet_jar="/root/comet.jar"
