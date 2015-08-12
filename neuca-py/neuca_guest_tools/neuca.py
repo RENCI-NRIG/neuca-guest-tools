@@ -447,12 +447,13 @@ class NEucaCometData(NEucaData):
         ifaces_rtn=[]
         for iface in ifaces:
             print "iface: " + str(iface)
-            #ifaces_rtn.append=[mac, state + ":" + ip_type + ":" + ip ]
+            ifaces_rtn.append=[mac, state + ":" + ip_type + ":" + ip ]
         #
         #print "RETURNING hostname = " + hostname
 
         #return hostname
 
+        print "ifaces_rtn= " + str(ifaces_rtn)
 
         return ifaces_rtn
 
