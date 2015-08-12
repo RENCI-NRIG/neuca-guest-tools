@@ -418,7 +418,7 @@ class NEucaCometData(NEucaData):
 
         #java -jar comet.jar -configFile comet.vm.properties -getHostname aee48bcc-a7de-45e3-8318-373c23c5b12e 5317514e-9746-485a-affe-0d706f382adf   
         try:
-                cmd = [ str(executable), "-jar", comet_jar, "-configFile", self.comet_vm_properties_path , "-getHostname" , self.sliceID , self.reservationID ]
+            cmd = [ str(executable), "-jar", comet_jar, "-configFile", self.comet_vm_properties_path , "-getHostname" , self.sliceID , self.reservationID ]
             rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
             if rtncode != 0:
                 print 'rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)
