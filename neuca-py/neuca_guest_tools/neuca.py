@@ -293,10 +293,39 @@ class NEucaCometData(NEucaData):
         print "self.comet_vm_properties: " + str(self.comet_vm_properties_path)
         print "self.comet_vm_keystore: " + str(self.comet_vm_keystore_path)
         print "self.comet_vm_truststore: " + str(self.comet_vm_truststore_path)
+        
+        #decode the keystores from base64
+        self.__decode_keystores()
+
+    def __decode_keystores():
+        keystore64_path = self.comet_vm_keystore
+        truststore64_path = self.comet_vm_truststore_path
+        
+        keystore_path = re.sub(r"/.base64$", "", keystore64_path)
+        truststore_path = re.sub(r"/.base64$", "", truststore64_path)
+
+        print "keystore64_path: " + keystore64_path
+        print "keystore_path  : " + keystore_path
+
+        print "truststore64_path: " + truststore64_path
+        print "truststore_path  : " + truststore_path
+
+        
+
+        with open (keystore64_path, "r") as keystore64_file:
+            with open (keystore_path, "wb") as keystore_file:
+                keystore_file.write(base64.decode(keystore64_file.read()))
+                
+        with open (truststore64_path, "r") as truststore64_file:
+            with open (truststore_path, "wb") as truststore_file:
+                truststore_file.write(base64.decode(truststore64_file.read()))
+    
+        self.comet_vm_keystore_path = keystore_path
+        self.comet_vm_truststore_path = truststore_path
 
 
     def __query_comet(self):
-        command = 'java'
+        cmd = 'java'
         exeExists=False
         for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
             executable = os.path.join(dir, command)
@@ -307,7 +336,7 @@ class NEucaCometData(NEucaData):
                 break
 
         if not exeExists:
-            #self.log.error('java does not exist in paths ., /bin, or /usr/bin')
+            #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`
             return None
 
 
@@ -331,6 +360,8 @@ class NEucaCometData(NEucaData):
         print "data_stdout: " + str(data_stdout)
         print "data_stderr: " + str(data_stderr)
 
+        
+
         return
         
 
@@ -338,43 +369,79 @@ class NEucaCometData(NEucaData):
         return
 
     def get(self, section, field):
-        return
+        return None
 
     def getBootScript(self):
-        return
+        return None
 
     def getAllScripts(self):
-        return
+        return None
 
     def getInterface(self, iface):
-        return
+        return None
 
     def getAllInterfaces(self):
-        return
+        return None
 
     def getAllStorage(self):
-        return
+        return None
 
     def getAllScripts(self):
-        return
+        return None
 
     def getAllRoutes(self):
-        return
+        return None
 
     def isRouter(self):
-        return
+        return None
 
     def getISCSI_iqn(self):
-        return
+        return None
 
     def getHostname(self):
-        return
+        command = 'java'
+        exeExists=False
+        for dir in ['', '/bin/', '/usr/bin', '/sbin', '/usr/sbin']:
+            executable = os.path.join(dir, command)
+            if not os.path.exists(executable):
+                continue
+            else:
+                exeExists=True
+                        break
+
+            if not exeExists:
+            #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`   
+            return None
+
+
+        comet_jar="/root/comet.jar"
+
+        #java -jar comet.jar -configFile comet.vm.properties -getHostname aee48bcc-a7de-45e3-8318-373c23c5b12e 5317514e-9746-485a-affe-0d706f382adf   
+        try:
+                cmd = [ str(executable), "-jar", comet_jar, "-configFile", self.comet_vm_properties_path , "-getHostname" , self.sliceID , self.reservationID ]
+            rtncode, data_stdout, data_stderr = Commands.run(cmd, timeout=60)
+            if rtncode != 0:
+                print 'rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)
+                #self.log.error('rtncode: ' + str(rtncode) + 'Failed to start open-iscsi with command: ' + str(cmd)) 
+                return None
+
+        except Exception as e:
+            print 'Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc())
+            #self.log.error('Exception: Failed to query comet with command: ' + str(cmd) + " " +  str(type(e)) + " : " + str(e) + "\n" + str(traceback.format_exc()))  
+            return
+
+        print "cmd: " + str(cmd)
+        print "rtncode: " + str(rtncode)
+        print "data_stdout: " + str(data_stdout)
+        print "data_stderr: " + str(data_stderr)
+
+        return 
 
     def empty(self):
-        return
+        return None
 
     def getAllUserData(self):
-        self.__query_comet()
+        return None
         return "NEucaCometData.getAllUserData NOT IMPLEMENTED"
 
 
