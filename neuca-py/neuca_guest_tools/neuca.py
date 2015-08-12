@@ -33,6 +33,7 @@ import re
 import socket
 import time
 
+import base64
 import abc
 
 import neuca_guest_tools as neuca
