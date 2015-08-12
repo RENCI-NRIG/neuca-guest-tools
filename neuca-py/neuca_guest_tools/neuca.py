@@ -432,10 +432,10 @@ class NEucaCometData(NEucaData):
                 if len(head) >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'ip_address':
                     mac = head[2].strip()
                     ifaces[mac]['ip_address'] = line[3].strip()
-                if len(head} >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'protocol':
+                if len(head) >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'protocol':
                     mac = head[2].strip()
                     ifaces[mac]['protocol'] =line[3].strip()
-                if len(head} >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'state':
+                if len(head) >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'state':
                     mac = head[2].strip()
                     ifaces[mac]['state'] =line[3].strip()
 
