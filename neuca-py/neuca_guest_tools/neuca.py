@@ -298,11 +298,14 @@ class NEucaCometData(NEucaData):
         self.__decode_keystores()
 
     def __decode_keystores(self):
-        keystore64_path = self.comet_vm_keystore_path
-        truststore64_path = self.comet_vm_truststore_path
+        keystore_path = self.comet_vm_keystore_path
+        truststore_path = self.comet_vm_truststore_path
         
-        keystore_path = re.sub(r"/.base64$", "", keystore64_path)
-        truststore_path = re.sub(r"/.base64$", "", truststore64_path)
+        #keystore_path = re.sub(r"/.base64$", "", keystore64_path)
+        #truststore_path = re.sub(r"/.base64$", "", truststore64_path)
+
+        keystore64_path = keystore_path + ".base64"
+        truststore64_path = truststore_path + ".base64"
 
         print "keystore64_path: " + keystore64_path
         print "keystore_path  : " + keystore_path
