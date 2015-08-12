@@ -444,7 +444,17 @@ class NEucaCometData(NEucaData):
         print "data_stdout: " + str(data_stdout)
         print "data_stderr: " + str(data_stderr)
 
-        return 
+
+        #Parse the result 
+        hostname=None
+        lines = data_stdout.split('\n')
+
+        for line in lines:
+            line = line.split()
+            if len(line) >= 2 and line[0].strip() == 'Value:':
+                hostname=line[1].strip()
+
+        return hostname
 
     def empty(self):
         return None
