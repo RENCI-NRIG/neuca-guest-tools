@@ -314,15 +314,16 @@ class NEucaCometData(NEucaData):
         print "truststore64_path: " + truststore64_path
         print "truststore_path  : " + truststore_path
 
+        base64.decode(keystore64_path,keystore_path)
+        base64.decode(truststore64_path,truststore_path)
         
-
-        with open (keystore64_path, "r") as keystore64_file:
-            with open (keystore_path, "wb") as keystore_file:
-                keystore_file.write(base64.decode(keystore64_file.read()))
+        #with open (keystore64_path, "r") as keystore64_file:
+        #    with open (keystore_path, "wb") as keystore_file:
+        #       keystore_file.write(base64.decode(keystore64_file.read()))
                 
-        with open (truststore64_path, "r") as truststore64_file:
-            with open (truststore_path, "wb") as truststore_file:
-                truststore_file.write(base64.decode(truststore64_file.read()))
+        #with open (truststore64_path, "r") as truststore64_file:
+        #    with open (truststore_path, "wb") as truststore_file:
+        #        truststore_file.write(base64.decode(truststore64_file.read()))
     
         self.comet_vm_keystore_path = keystore_path
         self.comet_vm_truststore_path = truststore_path
