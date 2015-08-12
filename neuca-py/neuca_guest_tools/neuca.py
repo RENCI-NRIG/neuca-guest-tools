@@ -429,6 +429,11 @@ class NEucaCometData(NEucaData):
             line = line.split()
             if len(line) >= 4:
                 head = line[0].split(':')
+                if len(head) >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID:
+                    mac = head[2].strip()
+                    if not mac in ifaces:
+                        ifaces[mac]={}
+
                 if len(head) >= 3 and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'ip_address':
                     mac = head[2].strip()
                     ifaces[mac]['ip_address'] = line[3].strip()
