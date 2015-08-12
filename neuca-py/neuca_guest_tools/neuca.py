@@ -422,20 +422,34 @@ class NEucaCometData(NEucaData):
 
 
         #Parse the result 
-        #hostname=None
-        #lines = data_stdout.split('\n')
-        #
-        #for line in lines:
-        #    line = line.split()
-        #    if len(line) >= 2 and line[0].strip() == 'Value:':
-        #                hostname=line[1].strip()
+        ifaces={}
+        lines = data_stdout.split('\n')
+        
+        for line in lines:
+            line = line.split()
+            if len(line) >= 4:
+                head = line[0].split(':')
+                if len(head >= 3) and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'ip_address':
+                    mac = head[2].strip()
+                    ifaces[mac]['ip_address'] = line[3].strip()
+                if len(head >= 3) and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'protocol':
+                    mac = head[2].strip()
+                    ifaces[mac]['protocol'] =line[3].strip()
+                if len(head >= 3) and head[0].strip() == self.sliceID and head[1].strip() == self.reservationID and line[2].strip() == 'state':
+                    mac = head[2].strip()
+                    ifaces[mac]['state'] =line[3].strip()
+
+        ifaces_rtn=[]
+        for iface in ifaces:
+            print "iface: " + str(iface)
+            #ifaces_rtn.append=[mac, state + ":" + ip_type + ":" + ip ]
         #
         #print "RETURNING hostname = " + hostname
 
         #return hostname
 
 
-        return None
+        return ifaces_rtn[]
 
     def getAllStorage(self):
         return None
