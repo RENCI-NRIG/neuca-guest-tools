@@ -309,7 +309,7 @@ class NEucaCometData(NEucaData):
         comet_vm_properties_file.write("comet.client.keystore=" + self.comet_vm_keystore_path + "\n")
         comet_vm_properties_file.write("comet.client.keystore.pass=" + self.userData.get("comet","comet.client.keystore.pass")  + "\n")
         comet_vm_properties_file.write("comet.client.truststore=" + self.comet_vm_truststore_path + "\n")
-        comet_vm_properties_file.write("comet.client.truststore.pass=" + self.userData.get("comet","comet.client.truststore.pass"  + "\n")
+        comet_vm_properties_file.write("comet.client.truststore.pass=" + self.userData.get("comet","comet.client.truststore.pass")  + "\n")
         comet_vm_properties_file.write("comet.client.accumulo.instance=" + self.userData.get("comet","comet.client.accumulo.instance")  + "\n")
         comet_vm_properties_file.write("comet.client.zookeeperse.hosts=" + self.userData.get("comet","comet.client.zookeeperse.hosts")  +"\n")
         comet_vm_properties_file.write("comet.client.table.main=" + self.userData.get("comet","comet.client.table.main")  + "\n")
