@@ -278,25 +278,53 @@ class NEucaCometData(NEucaData):
         
         self.sliceID = self.userData.get("global","slice_id")
         self.reservationID = self.userData.get("global","reservation_id")
-        self.comet_vm_properties_path = self.userData.get("global","comet_vm_properties")
-        self.comet_vm_keystore_path = self.userData.get("global","comet_vm_keystore")
-        self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore")
+        #self.comet_vm_properties_path = self.userData.get("global","comet_vm_properties")
+        #self.comet_vm_keystore_path = self.userData.get("global","comet_vm_keystore")
+        #self.comet_vm_truststore_path = self.userData.get("global","comet_vm_truststore")
 
-        #decode creds from base64
-        #self.log.info("self.sliceID: " + str(self.sliceID))
-        #self.log.info("self.reservationID: " + str(self.reservationID))
-        #self.log.info("self.comet_vm_properties: " + str(self.comet_vm_properties_path))
-        #self.log.info("self.comet_vm_keystore: " + str(self.comet_vm_keystore_path))
-        #self.log.info("self.comet_vm_truststore: " + str(self.comet_vm_truststore_path))
+
+
+        
+        #/var/lib/neuca/comet/*
+        self.comet_vm_keystore_path='/var/lib/neuca/comet/keystore.jks'
+        self.comet_vm_keystore = base64.b64decode(self.userData.get("comet","keystore"))
+        if not os.path.exists(os.path.dirname(self.comet_vm_keystore_path)):
+            os.makedirs(os.path.dirname(self.comet_vm_keystore_path))
+        keystore_file = open(self.comet_vm_keystore_path,'wb')
+        keystore_file.write(self.comet_vm_keystore)
+        keystore_file.close()
+
+        self.comet_vm_truststore_path='/var/lib/neuca/comet/truststore.jks'
+        if not os.path.exists(os.path.dirname(self.comet_vm_truststore_path)):
+            os.makedirs(os.path.dirname(self.comet_vm_truststore_path))
+        self.comet_vm_truststore = base64.b64decode(self.userData.get("comet","truststore"))
+        truststore_file = open(self.comet_vm_truststore_path,'wb')
+        truststore_file.write(self.comet_vm_truststore)
+        truststore_file.close()
+
+        self.comet_vm_properties_path='/var/lib/neuca/comet/comet.vm.properties'
+        if not os.path.exists(os.path.dirname(self.comet_vm_properties_path)):
+            os.makedirs(os.path.dirname(self.comet_vm_properties_path))
+        comet_vm_properties_file = open(self.comet_vm_properties_path,'w')
+        comet_vm_properties_file.write("comet.client.keystore=" + self.comet_vm_truststore_path)
+        comet_vm_properties_file.write("comet.client.keystore.pass=accumuloAuth")
+        comet_vm_properties_file.write("comet.client.truststore=/root/comet/truststore.jks")
+        comet_vm_properties_file.write("comet.client.truststore.pass=accumuloAuth")
+        comet_vm_properties_file.write("comet.client.accumulo.instance=comet")
+        comet_vm_properties_file.write("comet.client.zookeeperse.hosts=comet1.renci.org,comet2.renci.org,comet3.renci.org,comet4.renci.org")
+        comet_vm_properties_file.write("comet.client.table.main=cometMain")
+        comet_vm_properties_file.write("comet.client.accumulo.user.default=root")
+        comet_vm_properties_file.write("comet.client.accumulo.user.default.pass=accumuloAuth")
+        comet_vm_properties_file.write("comet.client.table.ifce=interfaces")
+        comet_vm_properties_file.close()
+
+        
 
         print "self.sliceID: " + str(self.sliceID)
         print "self.reservationID: " + str(self.reservationID)
-        print "self.comet_vm_properties: " + str(self.comet_vm_properties_path)
-        print "self.comet_vm_keystore: " + str(self.comet_vm_keystore_path)
-        print "self.comet_vm_truststore: " + str(self.comet_vm_truststore_path)
         
         #decode the keystores from base64
-        self.__decode_keystores()
+        #self.__decode_keystores()
 
     def __decode_keystores(self):
         keystore_path = self.comet_vm_keystore_path
@@ -348,7 +376,7 @@ class NEucaCometData(NEucaData):
             #self.log.error('java does not exist in paths ., /bin, or /usr/bin')`
             return None
 
-
+        #TODO:  put jar somewhere more permanent
         comet_jar="/root/comet.jar"
 
         #java -jar comet.jar -configFile comet.vm.properties -getHostname aee48bcc-a7de-45e3-8318-373c23c5b12e 5317514e-9746-485a-affe-0d706f382adf
