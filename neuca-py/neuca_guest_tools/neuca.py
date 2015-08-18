@@ -315,7 +315,7 @@ class NEucaCometData(NEucaData):
         comet_vm_properties_file.write("comet.client.table.main=" + self.userData.get("comet","comet.client.table.main")  + "\n")
         comet_vm_properties_file.write("comet.client.accumulo.user.default=" + self.userData.get("comet","comet.client.accumulo.user.default")  + "\n")
         comet_vm_properties_file.write("comet.client.accumulo.user.default.pass=" + self.userData.get("comet","comet.client.accumulo.user.default.pass")  + "\n")
-        comet_vm_properties_file.write("comet.client.table.ifce=" + self.userData.get("comet","comet.client.table.ifce"  +"\n")
+        comet_vm_properties_file.write("comet.client.table.ifce=" + self.userData.get("comet","comet.client.table.ifce")  +"\n")
         comet_vm_properties_file.close()
 
         
