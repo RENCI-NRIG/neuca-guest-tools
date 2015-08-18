@@ -306,9 +306,9 @@ class NEucaCometData(NEucaData):
         if not os.path.exists(os.path.dirname(self.comet_vm_properties_path)):
             os.makedirs(os.path.dirname(self.comet_vm_properties_path))
         comet_vm_properties_file = open(self.comet_vm_properties_path,'w')
-        comet_vm_properties_file.write("comet.client.keystore=" + self.comet_vm_truststore_path)
+        comet_vm_properties_file.write("comet.client.keystore=" + self.comet_vm_keystore_path)
         comet_vm_properties_file.write("comet.client.keystore.pass=accumuloAuth")
-        comet_vm_properties_file.write("comet.client.truststore=/root/comet/truststore.jks")
+        comet_vm_properties_file.write("comet.client.truststore=" + self.comet_vm_truststore_path)
         comet_vm_properties_file.write("comet.client.truststore.pass=accumuloAuth")
         comet_vm_properties_file.write("comet.client.accumulo.instance=comet")
         comet_vm_properties_file.write("comet.client.zookeeperse.hosts=comet1.renci.org,comet2.renci.org,comet3.renci.org,comet4.renci.org")
