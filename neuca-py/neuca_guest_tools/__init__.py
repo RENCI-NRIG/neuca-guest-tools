@@ -26,7 +26,6 @@ _UdevPrefix = 'persistent-neuca'
 _DataUdevPriority = '10'
 _MgmtUdevPriority = '15'
 
-_BotoTimeout = '10'
 _CommandTimeout = '300'
 _PidFileTimeout = '5'
 
