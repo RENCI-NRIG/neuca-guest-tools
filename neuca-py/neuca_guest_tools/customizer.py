@@ -1048,12 +1048,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         fd = None
         try:
-            fd = open(self.hostsFile, 'r+')
+            fd = open(self.hostsFile, 'a+')
         except:
             self.log.error('Unable to open ' + self.hostsFile +
                            ' for modifications!')
             return
 
+        fd.seek(0)
         hostsEntries = list(fd)
         modified = False
 
