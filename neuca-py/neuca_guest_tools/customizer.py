@@ -975,8 +975,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         Returns True if the udev file was modified, and False otherwise.
         """
-        # FIXME: requestedName is intended for when we pass desired
-        # interface names through in userdata.
+        # requestedName parameter will be used when we pass user-requested
+        # interface names through via user data.
 
         neucaStr = ('NEuca generated udev persistent naming file - ' +
                     'MANUAL UPDATES MAY BE OVERWRITTEN. ###\n')
@@ -984,7 +984,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         endStr = '### END ' + neucaStr
 
         udevFile = ('/etc/udev/rules.d/%d-persistent-%s.rules'
-                    % (priority, systemIfaceName))
+                    % (priority, mac))
         fd = None
         try:
             fd = open(udevFile, 'a+')
