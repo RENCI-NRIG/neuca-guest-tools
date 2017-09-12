@@ -1,0 +1,14 @@
+[Unit]
+Description=NEuca post-boot configuration daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/neucad start
+ExecReload=/usr/bin/neucad restart
+ExecStop=/usr/bin/neucad stop
+Restart=on-failure
+PIDFile=/var/run/neucad.pid
+
+[Install]
+WantedBy=multi-user.target
