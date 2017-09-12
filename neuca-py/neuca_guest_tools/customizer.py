@@ -979,7 +979,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         # interface names through in userdata.
 
         neucaStr = ('NEuca generated udev persistent naming file - ' +
-                    'MANUAL UPDATES MAY BE OVERWRITTEN. ###')
+                    'MANUAL UPDATES MAY BE OVERWRITTEN. ###\n')
         startStr = '### BEGIN ' + neucaStr
         endStr = '### END ' + neucaStr
 
@@ -1004,12 +1004,12 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         macIter = iter(mac)
         macStr = ':'.join(a + b for a, b in zip(macIter, macIter))
-        macCommentStr = '### MAC: ' + macStr
-        configCommentStr = '### Config: ' + ifaceConfigString
+        macCommentStr = '### MAC: ' + macStr + '\n'
+        configCommentStr = '### Config: ' + ifaceConfigString + '\n'
         udevEntry = (('SUBSYSTEM=="net", ACTION=="add", ' +
-                      'ATTR{address}=="%s", NAME="%s"')
+                      'ATTR{address}=="%s", NAME="%s"\n')
                      % (macStr, systemIfaceName))
-        if neucaHeaderStart:
+        if neucaHeaderStart is not None:
             if (udevEntries[neucaHeaderStart + 2] != configCommentStr):
                 udevEntries[neucaHeaderStart + 1] = macCommentStr
                 udevEntries[neucaHeaderStart + 2] = configCommentStr
@@ -1029,7 +1029,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 fd.seek(0)
                 fd.truncate()
                 for line in udevEntries:
-                    fd.write(line + '\n')
+                    fd.write(line)
             except Exception:
                 self.log.error('Error writing modifications to ' +
                                udevFile)
@@ -1064,7 +1064,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             pass
 
         newHostsEntry = loopbackAddress + '\t' + hostName + '\n'
-        if neucaEntry:
+        if neucaEntry is not None:
             if (hostsEntries[neucaEntry + 1] != newHostsEntry):
                 hostsEntries[neucaEntry + 1] = newHostsEntry
                 modified = True
