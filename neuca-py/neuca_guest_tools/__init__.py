@@ -22,7 +22,8 @@ _LogLevel = 'DEBUG'
 _LogRetain = '5'
 _LogFileSize = '5000000'
 
-_UdevPrefix = 'persistent-neuca'
+_UdevDirectory = '/etc/udev/rules.d'
+_UdevSubstring = 'neuca-persistent'
 _DataUdevPriority = '10'
 _MgmtUdevPriority = '15'
 
@@ -47,7 +48,8 @@ CONFIG.set('runtime', 'pid-file', _PidFile)
 CONFIG.set('runtime', 'command-timeout', _CommandTimeout)
 CONFIG.set('runtime', 'pidfile-timeout', _PidFileTimeout)
 CONFIG.set('runtime', 'testing', _testing)
-CONFIG.set('linux', 'udev-prefix', _UdevPrefix)
+CONFIG.set('linux', 'udev-directory', _UdevDirectory)
+CONFIG.set('linux', 'udev-substring', _UdevSubstring)
 CONFIG.set('linux', 'data-udev-priority', _DataUdevPriority)
 CONFIG.set('linux', 'mgmt-udev-priority', _MgmtUdevPriority)
 CONFIG.set('logging', 'log-directory', _LogDir)

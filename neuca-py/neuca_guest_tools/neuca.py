@@ -79,6 +79,7 @@ class NEucad():
                 self.customizer.updateNetworking()
                 self.customizer.updateStorage()
                 self.customizer.runNewScripts()
+                self.customizer.firstRun = False
             except KeyboardInterrupt:
                 self.log.error('Terminating on keyboard interrupt...')
                 sys.exit(0)

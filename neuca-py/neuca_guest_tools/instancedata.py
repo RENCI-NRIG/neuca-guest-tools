@@ -19,6 +19,7 @@
 # Author: Victor J. Orlikowski (vjo@duke.edu)
 
 import ConfigParser
+import time
 import boto.utils
 
 from neuca_guest_tools import CONFIG
@@ -31,6 +32,7 @@ class NEucaInstanceData(object):
         self.config = None
         self.publicIP = None
         self.userData = None
+        self.fetchTime = 0
         try:
             self.__testing__ = CONFIG.getboolean('runtime', 'testing')
         except Exception:
@@ -60,6 +62,10 @@ class NEucaInstanceData(object):
 
         self.config = ConfigParser.RawConfigParser()
         self.config.read(fh.path)
+
+        # Finally, record when this instanceData was fetched, so we
+        # know how "fresh" it is.
+        self.fetchTime = time.time()
 
     def getUserDataField(self, section, field):
         try:

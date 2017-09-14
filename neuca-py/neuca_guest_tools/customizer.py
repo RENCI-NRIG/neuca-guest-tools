@@ -21,12 +21,15 @@
 import os
 import re
 import socket
+import subprocess
 import time
+import glob
 
 from neuca_guest_tools import CONFIG, LOGGER
 from neuca_guest_tools import _IPV4_LOOPBACK_NET as loopbackNet
 from neuca_guest_tools import _StorageDir as neuca_StorageDir
-from neuca_guest_tools import _UdevPrefix as default_udev_prefix
+from neuca_guest_tools import _UdevDirectory as default_udev_directory
+from neuca_guest_tools import _UdevSubstring as default_udev_substring
 from neuca_guest_tools import _MgmtUdevPriority as default_mgmt_udev_priority
 from neuca_guest_tools import _DataUdevPriority as default_data_udev_priority
 from neuca_guest_tools.instancedata import NEucaInstanceData
@@ -57,6 +60,7 @@ class NEucaOSCustomizer(object):
         self.instanceData = NEucaInstanceData()
         self.log = logging.getLogger(LOGGER)
         self.ignoredMacSet = set()
+        self.firstRun = True
 
     def updateInstanceData(self):
         self.instanceData.updateInstanceData()
@@ -110,10 +114,15 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.storage_dir = neuca_StorageDir
         self.hostsFile = '/etc/hosts'
         try:
-            self.udevPrefix = CONFIG.get('linux',
-                                         'udev-prefix')
+            self.udevDirectory = CONFIG.get('linux',
+                                            'udev-directory')
         except Exception:
-            self.udevPrefix = default_udev_prefix
+            self.udevDirectory = default_udev_directory
+        try:
+            self.udevSubstring = CONFIG.get('linux',
+                                            'udev-substring')
+        except Exception:
+            self.udevSubstring = default_udev_substring
         try:
             self.udevMgmtPrio = CONFIG.getint('linux',
                                               'mgmt-udev-priority')
@@ -132,7 +141,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         based on code from uuid.py by Ka-Ping Yee <ping@zesty.ca>
         """
 
-        args = '-o link'
         hw_identifiers = ['link/ether']
         command = 'ip'
         executable = None
@@ -144,16 +152,23 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 executable = None
 
         if executable is not None:
-            pipe = None
             try:
-                cmd = '%s %s 2>/dev/null' % (executable, args)
-                pipe = os.popen(cmd)
-            except IOError:
-                pipe = []
+                cmd = [executable, '-o', 'link']
+                (rtncode,
+                 data_stdout,
+                 data_stderr) = Commands.run(cmd, timeout=60)
+            except Exception as e:
+                self.log.exception('Failed to obtain list of interfaces ' +
+                                   'using command: ' + str(cmd))
+                self.log.error('Exception was of type: %s' % (str(type(e))))
+                return None
 
             # The "-o" flag in the args ensures one line per interface.
-            for line in pipe:
+            lines = data_stdout.split('\n')
+            for line in lines:
                 words = line.lower().split()
+                if len(words) == 0:
+                    continue
                 # The interface name is the second field
                 iface = words[1].strip(':')
 
@@ -170,7 +185,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         based on code from uuid.py by Ka-Ping Yee <ping@zesty.ca>
         """
 
-        args = '-o link'
         hw_identifiers = ['link/ether']
         command = 'ip'
         executable = None
@@ -182,16 +196,23 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 executable = None
 
         if executable is not None:
-            pipe = None
             try:
-                cmd = '%s %s 2>/dev/null' % (executable, args)
-                pipe = os.popen(cmd)
-            except IOError:
-                pipe = []
+                cmd = [executable, '-o', 'link']
+                (rtncode,
+                 data_stdout,
+                 data_stderr) = Commands.run(cmd, timeout=60)
+            except Exception as e:
+                self.log.exception('Failed to obtain list of interfaces ' +
+                                   'using command: ' + str(cmd))
+                self.log.error('Exception was of type: %s' % (str(type(e))))
+                return None
 
             # The "-o" flag in the args ensures one line per interface.
-            for line in pipe:
+            lines = data_stdout.split('\n')
+            for line in lines:
                 words = line.lower().split()
+                if len(words) == 0:
+                    continue
                 # The interface name is the second field
                 found_iface = words[1].strip(':')
 
@@ -210,7 +231,6 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         phyDict = {}
 
-        args = '-o link'
         hw_identifiers = ['link/ether']
         command = 'ip'
         executable = None
@@ -222,16 +242,23 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 executable = None
 
         if executable is not None:
-            pipe = None
             try:
-                cmd = '%s %s 2>/dev/null' % (executable, args)
-                pipe = os.popen(cmd)
-            except IOError:
-                pipe = []
+                cmd = [executable, '-o', 'link']
+                (rtncode,
+                 data_stdout,
+                 data_stderr) = Commands.run(cmd, timeout=60)
+            except Exception as e:
+                self.log.exception('Failed to obtain list of interfaces ' +
+                                   'using command: ' + str(cmd))
+                self.log.error('Exception was of type: %s' % (str(type(e))))
+                return None
 
             # The "-o" flag in the args ensures one line per interface.
-            for line in pipe:
+            lines = data_stdout.split('\n')
+            for line in lines:
                 words = line.lower().split()
+                if len(words) == 0:
+                    continue
                 # The interface name is the second field
                 iface = words[1].strip(':')
 
@@ -256,12 +283,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 executable = None
 
         if executable is not None:
-            pipe = None
-            try:
-                cmd = ('%s link set %s %s 2>/dev/null' % (executable, iface,
-                                                          state))
-                pipe = os.popen(cmd)
-            except IOError:
+            cmd = [
+                executable,
+                'link', 'set',
+                iface, state
+            ]
+            rtncode = subprocess.call(cmd)
+            if rtncode != 0:
                 self.log.warning(('Unable to bring interface %s %s ' +
                                   'at this time.')
                                  % (iface, state))
@@ -281,18 +309,26 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 # the dataplane MAC is in the ignored set, in the
                 # configuration file.
                 try:
-                    cmd = ('%s -o addr show dev %s 2>/dev/null' % (executable,
-                                                                   iface))
-                    pipe = os.popen(cmd)
-                except IOError:
-                    self.log.warning(('Unable to check addresses ' +
-                                      'on interface %s at this time.')
-                                     % iface)
-                    return
+                    cmd = [
+                        executable,
+                        '-o', 'addr', 'show', 'dev',
+                        iface
+                    ]
+                    (rtncode,
+                     data_stdout,
+                     data_stderr) = Commands.run(cmd, timeout=60)
+                except Exception as e:
+                    self.log.exception(('Failed to obtain list of addresses ' +
+                                        'for device %s using command: %s')
+                                       % (iface, str(cmd)))
+                    self.log.error('Exception was of type: %s'
+                                   % (str(type(e))))
+                    return None
 
                 cidr_found = False
                 addr_identifiers = ['inet', 'inet6']
-                for line in pipe:
+                lines = data_stdout.split('\n')
+                for line in lines:
                     words = line.lower().split()
                     for i in range(len(words)):
                         if (words[i] in addr_identifiers
@@ -300,27 +336,39 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                             cidr_found = True
 
                 if not cidr_found:
-                    try:
-                        cmd = ('%s addr flush dev %s 2>/dev/null' %
-                               (executable, iface))
-                        pipe = os.popen(cmd)
-                    except IOError:
-                        self.log.warning(('Unable to clear addresses ' +
+                    cmd = [
+                        executable,
+                        'addr', 'flush', 'dev',
+                        iface
+                    ]
+                    rtncode = subprocess.call(cmd)
+                    if rtncode != 0:
+                        self.log.warning(('Unable to flush addresses ' +
                                           'on interface %s at this time.')
                                          % iface)
                         return
+                    else:
+                        self.log.debug(('Flushed addresses on interface ' +
+                                        '%s due to change in configuration.')
+                                       % iface)
 
-                try:
-                    cmd = (
-                        ('%s addr add %s broadcast + ' +
-                         'scope global dev %s 2>/dev/null')
-                        % (executable, cidr, iface))
-                    pipe = os.popen(cmd)
-                except IOError:
-                    self.log.warning(('Unable to set address %s ' +
-                                      ' on interface %s at this time.')
-                                     % (cidr, iface))
-                    return
+                    cmd = [
+                        executable,
+                        'addr', 'add',
+                        cidr,
+                        'broadcast', '+', 'scope', 'global',
+                        'dev',
+                        iface
+                    ]
+                    rtncode = subprocess.call(cmd)
+                    if rtncode != 0:
+                        self.log.warning(('Unable to set address %s ' +
+                                          'on interface %s at this time.')
+                                         % (cidr, iface))
+                        return
+                    else:
+                        self.log.debug('Address %s configured on interface %s'
+                                       % (cidr, iface))
             elif ('up' == state and cidr is None):
                 self.log.debug(('CIDR unset for interface %s, but ' +
                                 'state is "%s"; leaving in user control.')
@@ -419,11 +467,30 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                        % (str(current_fs_type), str(device), str(fs_type)))
         return True
 
-    def __checkISCSI_handled(self, device_entry):
-        if os.path.exists(str(self.storage_dir) + '/' + str(device_entry)):
-            return True
-        else:
-            return False
+    def __checkISCSI_handled(self, device_entry, ip, port, lun,
+                             chap_user, chap_pass):
+        iscsiDevFile = ('%s/%s' % (self.storage_dir, device_entry))
+        fd = None
+        if os.path.exists(iscsiDevFile):
+            try:
+                fd = open(iscsiDevFile, 'r+')
+            except Exception:
+                self.log.error('Unable to open %s for reading!' % iscsiDevFile)
+                return False
+
+            fd.seek(0)
+            iscsiDevEntries = list(fd)
+            fd.close()
+
+            if (
+                    (ip in iscsiDevEntries[0]) and
+                    (port in iscsiDevEntries[1]) and
+                    (lun in iscsiDevEntries[3]) and
+                    (chap_user in iscsiDevEntries[4]) and
+                    (chap_pass in iscsiDevEntries[5])
+            ):
+                return True
+        return False
 
     def __updateISCSI_initiator(self, new_initiator_iqn):
         # test existing iscsi iqn;
@@ -555,7 +622,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                                % (str(rtncode), str(cmd)))
                 return None
 
-            self.log.debug('Targets: ' + str(data_stdout))
+            self.log.debug('Targets:\n' + str(data_stdout).rstrip('\n'))
         except Exception as e:
             self.log.exception('Failed to discover iSCSI targets ' +
                                'for device with command: ' + str(cmd))
@@ -863,6 +930,25 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         except OSError:
             self.log.debug('Mount point exists: ' + str(mount_point))
 
+        mtab = '/proc/mounts'
+        fd = None
+        try:
+            fd = open(mtab, 'r')
+        except Exception:
+            self.log.error('Unable to open %s for reading!' % mtab)
+            return
+
+        fd.seek(0)
+        mtabEntries = list(fd)
+        fd.close()
+        for entry in mtabEntries:
+            if mount_point in entry:
+                self.log.error('%s already has a filesystem mounted on it.'
+                               % mount_point)
+                self.log.error('Aborting attempt to mount %s on %s'
+                               % (device, mount_point))
+                return
+
         try:
             cmd = [
                 str(executable), '-t',
@@ -905,36 +991,44 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         f.close()
 
     def __addRoute(self, network, router):
-        args = ''
         command = 'ip'
         for dir in ['', '/sbin/', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
 
-            try:
-                cmd = ('%s %s route add %s via %s 2>/dev/null'
-                       % (executable, args, network, router))
-                self.log.info('Add route: ' + cmd)
-                os.popen(cmd)
-            except IOError:
-                continue
+            cmd = [
+                executable,
+                'route', 'add',
+                network,
+                'via',
+                router
+            ]
+            self.log.info('Attempting to add route to %s via %s'
+                          % (network, router))
+            rtncode = subprocess.call(cmd)
+            if rtncode != 0:
+                self.log.warning('Unable to add route to %s via %s'
+                                 % (network, router))
 
     def __delRoute(self, network):
-        args = ''
         command = 'ip'
         for dir in ['', '/sbin/', '/usr/sbin']:
             executable = os.path.join(dir, command)
             if not os.path.exists(executable):
                 continue
 
-            try:
-                cmd = ('%s %s route del %s 2>/dev/null'
-                       % (executable, args, network))
-                self.log.info('Delete route: ' + cmd)
-                os.popen(cmd)
-            except IOError:
-                continue
+            cmd = [
+                executable,
+                'route', 'del',
+                network
+            ]
+            self.log.info('Attempting to delete route to %s'
+                          % network)
+            rtncode = subprocess.call(cmd)
+            if rtncode != 0:
+                self.log.warning('Unable to delete route to %s'
+                                 % network)
 
     def __updateRoute(self, network, router):
         try:
@@ -978,13 +1072,12 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         # requestedName parameter will be used when we pass user-requested
         # interface names through via user data.
 
-        neucaStr = ('NEuca generated udev persistent naming file - ' +
-                    'MANUAL UPDATES MAY BE OVERWRITTEN. ###\n')
-        startStr = '### BEGIN ' + neucaStr
-        endStr = '### END ' + neucaStr
+        neucaStr = ('### NEuca generated udev persistent naming file - ' +
+                    'MANUAL UPDATES MAY BE OVERWRITTEN.\n')
 
-        udevFile = ('/etc/udev/rules.d/%d-persistent-%s.rules'
-                    % (priority, mac))
+        udevFile = ('%s/%d-%s-%s.rules'
+                    % (self.udevDirectory, priority,
+                       self.udevSubstring, mac))
         fd = None
         try:
             fd = open(udevFile, 'a+')
@@ -998,30 +1091,26 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         neucaHeaderStart = None
         try:
-            neucaHeaderStart = udevEntries.index(startStr)
+            neucaHeaderStart = udevEntries.index(neucaStr)
         except ValueError:
             pass
 
         macIter = iter(mac)
         macStr = ':'.join(a + b for a, b in zip(macIter, macIter))
-        macCommentStr = '### MAC: ' + macStr + '\n'
         configCommentStr = '### Config: ' + ifaceConfigString + '\n'
         udevEntry = (('SUBSYSTEM=="net", ACTION=="add", ' +
                       'ATTR{address}=="%s", NAME="%s"\n')
                      % (macStr, systemIfaceName))
         if neucaHeaderStart is not None:
-            if (udevEntries[neucaHeaderStart + 2] != configCommentStr):
-                udevEntries[neucaHeaderStart + 1] = macCommentStr
-                udevEntries[neucaHeaderStart + 2] = configCommentStr
-                udevEntries[neucaHeaderStart + 3] = udevEntry
+            if (udevEntries[neucaHeaderStart + 1] != configCommentStr):
+                udevEntries[neucaHeaderStart + 1] = configCommentStr
+                udevEntries[neucaHeaderStart + 2] = udevEntry
                 modified = True
         else:
             udevEntries = []
-            udevEntries.append(startStr)
-            udevEntries.append(macCommentStr)
+            udevEntries.append(neucaStr)
             udevEntries.append(configCommentStr)
             udevEntries.append(udevEntry)
-            udevEntries.append(endStr)
             modified = True
 
         if modified:
@@ -1035,7 +1124,46 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                                udevFile)
                 modified = False
 
+        fd.close()
         return modified
+
+    def __cleanStaleUdevFiles(self, interfaceList):
+        """
+        Cleans up stale udev files, but only if the instance data
+        has been fetched within the last 15 seconds (i.e. it's
+        "fresh").
+        """
+        dpCheckTime = time.time()
+        if ((dpCheckTime - self.instanceData.fetchTime) < 15):
+            dpUdevs = glob.glob(('%s/%d-%s*.rules'
+                                 % (self.udevDirectory,
+                                    self.udevDataPrio,
+                                    self.udevSubstring)))
+            freshUdevs = {}
+            staleUdevs = []
+            for iface in interfaceList:
+                mac = iface[0]
+                udevFile = ('%s/%d-%s-%s.rules'
+                            % (self.udevDirectory,
+                               self.udevDataPrio,
+                               self.udevSubstring,
+                               mac))
+                freshUdevs[udevFile] = True
+
+            for u in dpUdevs:
+                e = freshUdevs.get(u)
+                if e is None:
+                    staleUdevs.append(u)
+
+            for u in staleUdevs:
+                try:
+                    os.remove(u)
+                    self.log.debug('Removed stale udev file: %s'
+                                   % u)
+                except Exception as e:
+                    self.log.exception('Could not delete udev file %s' % u)
+                    self.log.error('Exception was of type: %s'
+                                   % (str(type(e))))
 
     def __updateHostsFile(self, loopbackAddress, hostName):
         """
@@ -1086,6 +1214,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             except:
                 self.log.error('Error writing modifications to ' +
                                self.hostsFile)
+        fd.close()
 
     def updateNetworking(self):
         """
@@ -1113,7 +1242,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 updateIface = self.__updateUdevFile(mac, sysName, iface[1],
                                                     self.udevDataPrio)
 
-            if updateIface:
+            if updateIface or self.firstRun:
                 # address_type is currently unused, but will be in future.
                 try:
                     # address_type = config[1]
@@ -1138,6 +1267,10 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             self.log.debug('Unexpected number of interfaces ' +
                            'in systemIfaces; skipping udev file update ' +
                            'for management interface.')
+
+        # Clean up from any dataplane interfaces that may have been
+        # removed.
+        self.__cleanStaleUdevFiles(interfaces)
 
         # update routes
         self.__updateRouter(self.isRouter())
@@ -1165,27 +1298,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         for device in storage_list:
             dev_name = device[0]
-
-            if self.__checkISCSI_handled(dev_name):
-                self.log.debug('Skipping previously handled storage device: ' +
-                               str(dev_name))
-                continue
-
             dev_fields = dict(enumerate(device[1].split(':')))
+
             proto = dev_fields.get(0)
             if proto == 'iscsi':
                 try:
                     ip = dev_fields.get(1)
                     port = dev_fields.get(2)
-
-                    targets = self.__ISCSI_discover(ip, port)
-                    if not targets or len(targets) < 1:
-                        # Hrm. No targets. Log it, and loop to next item.
-                        self.log.error(('Failed to discover iSCSI targets ' +
-                                        'for device %s at (%s:%s)')
-                                       % (str(dev_name), str(ip), str(port)))
-                        continue
-
                     lun = dev_fields.get(3)
                     chap_user = dev_fields.get(4)
                     chap_pass = dev_fields.get(5)
@@ -1198,6 +1317,24 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     fs_options = dev_fields.get(8)
                     fs_shouldFormat = dev_fields.get(9)
                     mount_point = dev_fields.get(10)
+
+                    if (
+                            self.__checkISCSI_handled(dev_name, ip, port, lun,
+                                                      chap_user, chap_pass) and
+                            not self.firstRun
+                    ):
+                        self.log.debug(('Skipping previously handled ' +
+                                        'storage device: %s')
+                                       % str(dev_name))
+                        continue
+
+                    targets = self.__ISCSI_discover(ip, port)
+                    if not targets or len(targets) < 1:
+                        # Hrm. No targets. Log it, and loop to next item.
+                        self.log.error(('Failed to discover iSCSI targets ' +
+                                        'for device %s at (%s:%s)')
+                                       % (str(dev_name), str(ip), str(port)))
+                        continue
 
                     self.log.debug('Found iSCSI targets for %s at (%s:%s)'
                                    % (str(dev_name), str(ip), str(port)))
@@ -1242,9 +1379,20 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                             if not os.path.exists(dev_path):
                                 continue
 
-                            if (fs_shouldFormat.lower() == 'yes'
-                                    and self.__checkISCSI_shouldFormat(
-                                        dev_path, fs_type)):
+                            # We need to check __checkISCSI_handled
+                            # again, because we don't want to
+                            # accidentally re-format a device, after
+                            # restarting neuca.
+                            if (
+                                    fs_shouldFormat.lower() == 'yes' and
+                                    self.__checkISCSI_handled(dev_name,
+                                                              ip, port,
+                                                              lun,
+                                                              chap_user,
+                                                              chap_pass) and
+                                    self.__checkISCSI_shouldFormat(
+                                        dev_path, fs_type)
+                            ):
                                 self.log.debug('Formatting FS')
                                 self.__updateISCSI_format(
                                     dev_path, fs_type, fs_options)
