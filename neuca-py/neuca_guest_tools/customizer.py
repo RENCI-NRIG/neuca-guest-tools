@@ -294,6 +294,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                                   'at this time.')
                                  % (iface, state))
                 return
+            else:
+                self.log.debug('Changed state for interface %s to: %s'
+                               % (iface, state))
 
             if ('up' == state and cidr is not None):
                 # We need to assign a CIDR to an interface.
@@ -1098,19 +1101,21 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         macIter = iter(mac)
         macStr = ':'.join(a + b for a, b in zip(macIter, macIter))
         configCommentStr = '### Config: ' + ifaceConfigString + '\n'
-        udevEntry = (('SUBSYSTEM=="net", ACTION=="add", ' +
-                      'ATTR{address}=="%s", NAME="%s"\n')
-                     % (macStr, systemIfaceName))
-        if neucaHeaderStart is not None:
-            if (udevEntries[neucaHeaderStart + 1] != configCommentStr):
-                udevEntries[neucaHeaderStart + 1] = configCommentStr
-                udevEntries[neucaHeaderStart + 2] = udevEntry
-                modified = True
-        else:
+        udevNameEntry = (('SUBSYSTEM=="net", ACTION=="add", ' +
+                          'ATTR{address}=="%s", NAME="%s"\n')
+                         % (macStr, systemIfaceName))
+        udevAuxEntry = ('ATTR{address}=="%s", ENV{NM_UNMANAGED}="1"\n'
+                        % macStr)
+        if (
+                (neucaHeaderStart is None) or
+                (udevEntries[neucaHeaderStart + 1] != configCommentStr)
+        ):
             udevEntries = []
             udevEntries.append(neucaStr)
             udevEntries.append(configCommentStr)
-            udevEntries.append(udevEntry)
+            udevEntries.append(udevNameEntry)
+            if priority == self.udevDataPrio:
+                udevEntries.append(udevAuxEntry)
             modified = True
 
         if modified:
@@ -1120,7 +1125,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 for line in udevEntries:
                     fd.write(line)
             except Exception:
-                self.log.error('Error writing modifications to ' +
+                self.log.error('Error writing modifications to: ' +
                                udevFile)
                 modified = False
 
