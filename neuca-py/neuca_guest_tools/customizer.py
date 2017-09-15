@@ -1389,12 +1389,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                             # accidentally re-format a device, after
                             # restarting neuca.
                             if (
-                                    fs_shouldFormat.lower() == 'yes' and
-                                    self.__checkISCSI_handled(dev_name,
-                                                              ip, port,
-                                                              lun,
-                                                              chap_user,
-                                                              chap_pass) and
+                                    fs_shouldFormat.lower() == 'yes'
+                                    and
+                                    not self.__checkISCSI_handled(dev_name,
+                                                                  ip, port,
+                                                                  lun,
+                                                                  chap_user,
+                                                                  chap_pass)
+                                    and
                                     self.__checkISCSI_shouldFormat(
                                         dev_path, fs_type)
                             ):
@@ -1517,4 +1519,9 @@ class NEucaRedhatCustomizer(NEucaLinuxCustomizer):
 
 class NEucaDebianCustomizer(NEucaLinuxCustomizer):
     def __init__(self, distro):
-        super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi')
+        import platform
+        distro_version = int(platform.dist()[1].split('.')[0])
+        if ((distro == 'Ubuntu') and (distro_version >= 16)):
+            super(NEucaDebianCustomizer, self).__init__(distro, 'iscsid')
+        else:
+            super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi')
