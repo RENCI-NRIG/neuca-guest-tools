@@ -68,7 +68,7 @@ class NEucad():
             os.makedirs(self.pidDir)
 
     def run(self):
-        self.log.info('distro: ' + str(self.distro))
+        self.log.info('distro: %s' % self.distro)
         self.customizer.buildIgnoredMacSet()
 
         while True:
@@ -105,7 +105,7 @@ def check_daemon_liveness(daemonApp):
     except Exception as e:
         sys.stderr.write(('Encountered an exception while checking if ' +
                           'PID file %s was stale.\n')
-                         % str(daemonApp.pidfile_path))
+                         % daemonApp.pidfile_path)
         sys.stderr.write('Exception was of type: %s' % str(type(e)))
         sys.stderr.write('Exiting...')
         sys.exit(1)
@@ -114,7 +114,7 @@ def check_daemon_liveness(daemonApp):
         sys.stderr.write(('Daemon is running, according to ' +
                           'PID lock file: %s\n' +
                           'Exiting...\n')
-                         % str(daemonApp.pidfile_path))
+                         % daemonApp.pidfile_path)
         sys.exit(1)
 
 
@@ -286,11 +286,11 @@ def main():
             except LockTimeout:
                 log.error(('PID file %s locked. ' +
                            'Exiting...')
-                          % str(app.pidfile_path))
+                          % app.pidfile_path)
                 sys.exit(1)
             except Exception as e:
                 log.exception('PID file %s could not be acquired.'
-                              % str(app.pidfile_path))
+                              % app.pidfile_path)
                 log.error('Exception was of type: %s' % str(type(e)))
                 log.error('Exiting...')
                 sys.exit(1)
