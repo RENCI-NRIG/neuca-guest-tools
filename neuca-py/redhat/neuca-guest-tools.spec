@@ -4,7 +4,7 @@
 %define use_systemd (0%{?fedora} && 0%{?fedora} >= 18) || (0%{?rhel} && 0%{?rhel} >= 7) || (0%{?suse_version} && 0%{?suse_version} >=1210)
 
 Name:           neuca-guest-tools
-Version:        1.6
+Version:        1.7
 Release:        1%{?dist}
 Summary:        NEuca - the ExoGENI VM post-boot configuration utility
 
@@ -99,6 +99,9 @@ if [ "$1" = "0" ]; then
 fi
 
 %changelog
+* Fri Sep 15 2017 Victor J. Orlikowski <vjo@duke.edu> - 1.7-1
+- 1.7 Update to new revision
+
 * Wed May 06 2015 Victor J. Orlikowski <vjo@duke.edu> - 1.6-1
 - 1.6 Update to new revision
 
