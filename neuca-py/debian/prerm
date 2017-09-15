@@ -1,6 +1,8 @@
 #!/bin/sh
+#DEBHELPER#
+set -e
+
 if [ "$1" = "remove" ]; then
-    /etc/init.d/neuca stop
     rm -rf /var/log/neuca/*
     rm -rf /var/lib/neuca/storage/*
     for i in /var/lib/neuca/*; do
