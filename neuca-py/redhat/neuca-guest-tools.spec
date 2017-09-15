@@ -46,10 +46,10 @@ mkdir -p %{buildroot}%{python_sitelib}
 install -d -m 755 %{buildroot}/var/log/neuca
 %if %{use_systemd}
 %{__mkdir} -p %{buildroot}%{_unitdir}
-%{__install} -m 644 neucad.service %{buildroot}%{_unitdir}/neucad.service
+%{__install} -m 644 redhat/neuca-guest-tools.service %{buildroot}%{_unitdir}/neuca-guest-tools.service
 %else
 %{__mkdir} -p %{buildroot}%{_initrddir}
-%{__install} -m 755 redhat/neuca.init %{buildroot}%{_initrddir}/neuca
+%{__install} -m 755 redhat/neuca-guest-tools.init %{buildroot}%{_initrddir}/neuca-guest-tools
 %endif
 
 %clean
@@ -66,28 +66,28 @@ rm -rf %{buildroot}
 %{python_sitelib}/neuca_guest_tools
 %{python_sitelib}/*.egg-info
 %if %{use_systemd}
-%{_unitdir}/neucad.service
+%{_unitdir}/neuca-guest-tools.service
 %else
-%{_initrddir}/neuca
+%{_initrddir}/neuca-guest-tools
 %endif
 
 %post
 if [ "$1" = "1" ]; then
 %if %use_systemd
-    /usr/bin/systemctl enable neucad.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl enable neuca-guest-tools.service >/dev/null 2>&1 ||:
 %else
-    /sbin/chkconfig --add neuca >/dev/null 2>&1 ||:
+    /sbin/chkconfig --add neuca-guest-tools >/dev/null 2>&1 ||:
 %endif
 fi
 
 %preun
 if [ "$1" = "0" ]; then
 %if %use_systemd
-    /usr/bin/systemctl --no-reload disable neucad.service >/dev/null 2>&1 || :
-    /usr/bin/systemctl stop neucad.service >/dev/null 2>&1 ||:
+    /usr/bin/systemctl --no-reload disable neuca-guest-tools.service >/dev/null 2>&1 || :
+    /usr/bin/systemctl stop neuca-guest-tools.service >/dev/null 2>&1 ||:
 %else
-    /sbin/service neuca stop > /dev/null 2>&1
-    /sbin/chkconfig --del neuca >/dev/null 2>&1 ||:
+    /sbin/service neuca-guest-tools stop > /dev/null 2>&1
+    /sbin/chkconfig --del neuca-guest-tools >/dev/null 2>&1 ||:
 %endif
     /bin/rm -rf /var/log/neuca/*
     /bin/rm -rf /var/lib/neuca/storage/*

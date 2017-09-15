@@ -10,26 +10,34 @@
 #                    perform additional post-boot configuration actions
 ### END INIT INFO
 
-# Author: Ilia Baldine <ibaldin@renci.org>
-# Author: Paul Ruth <pruth@renci.org>
 #
-# PATH should only include /usr/* if it runs after the mountnfs.sh script
+# neuca        Start up the NEucaD post-boot configuration daemon
+#
+# chkconfig: 2345 55 25
+# description: NEuca is a post-boot configuration mechanism for ExoGENI VMs. \
+#              This service starts up the NEuca daemon.
+#
+
+# Author: Ilya Baldin <ibaldin@renci.org>
+# Author: Paul Ruth <pruth@renci.org>
+# Author: Victor J. Orlikowski <vjo@duke.edu>
+
+prog="neucad"
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="NEucaD post-boot configuration daemon"
 NAME=neuca
-NEUCAD=/usr/bin/neucad
+NEUCAD=/usr/bin/$prog
+DEFAULTS=neuca-guest-tools
 RUNDIR=/var/lib/$NAME
 LOGDIR=/var/log/$NAME
+PIDFILE=/var/run/$NAME.pid
+lockfile=/var/lock/subsys/$prog
 
 # Read configuration variable file if it is present
-[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+[ -f /etc/sysconfig/$DEFAULTS ] && . /etc/sysconfig/$DEFAULTS
 
-# Load the VERBOSE setting and other rcS variables
-. /lib/init/vars.sh
-
-# Define LSB log_* functions.
-# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
-. /lib/lsb/init-functions
+# source function library
+. /etc/rc.d/init.d/functions
 
 if [ ! -d "$RUNDIR" ]; then
     echo "$RUNDIR missing; please check your installation!"
@@ -48,15 +56,15 @@ fi
 
 case "$1" in
   start)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && echo "Starting $DESC" "$NAME"
 	$NEUCAD start
 	;;
   stop)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && echo "Stopping $DESC" "$NAME"
 	$NEUCAD stop
 	;;
   restart|force-reload)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Re-starting $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && echo "Re-starting $DESC" "$NAME"
 	$NEUCAD restart
 	;;
   *)

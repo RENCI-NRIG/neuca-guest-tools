@@ -1,12 +1,4 @@
 #! /bin/sh
-#
-# neuca        Start up the NEucaD post-boot configuration daemon
-#
-# chkconfig: 2345 55 25
-# description: NEuca is a post-boot configuration mechanism for ExoGENI VMs. \
-#              This service starts up the NEuca daemon.
-#
-
 ### BEGIN INIT INFO
 # Provides:          NEuca
 # Required-Start:    $network
@@ -18,29 +10,36 @@
 #                    perform additional post-boot configuration actions
 ### END INIT INFO
 
-# Author: Ilia Baldine <ibaldin@renci.org>
 #
-# PATH should only include /usr/* if it runs after the mountnfs.sh script
+# neuca        Start up the NEucaD post-boot configuration daemon
+#
+# chkconfig: 2345 55 25
+# description: NEuca is a post-boot configuration mechanism for ExoGENI VMs. \
+#              This service starts up the NEuca daemon.
+#
 
-# source function library
-. /etc/rc.d/init.d/functions
+# Author: Ilya Baldin <ibaldin@renci.org>
+# Author: Paul Ruth <pruth@renci.org>
+# Author: Victor J. Orlikowski <vjo@duke.edu>
 
-RETVAL=0
 prog="neucad"
-lockfile=/var/lock/subsys/$prog
-
-# pull in sysconfig settings
-[ -f /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
-
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 DESC="NEucaD post-boot configuration daemon"
 NAME=neuca
-PIDFILE=/var/run/$NAME.pid
-SCRIPTNAME=/etc/init.d/$NAME
-NEUCASCRIPT=/etc/neuca/user-script
 NEUCAD=/usr/bin/$prog
+DEFAULTS=neuca-guest-tools
 RUNDIR=/var/lib/$NAME
 LOGDIR=/var/log/$NAME
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$DEFAULTS ] && . /etc/default/$DEFAULTS
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
 
 if [ ! -d "$RUNDIR" ]; then
     echo "$RUNDIR missing; please check your installation!"
@@ -59,15 +58,15 @@ fi
 
 case "$1" in
   start)
-	[ "$VERBOSE" != no ] && echo "Starting $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
 	$NEUCAD start
 	;;
   stop)
-	[ "$VERBOSE" != no ] && echo "Stopping $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
 	$NEUCAD stop
 	;;
   restart|force-reload)
-	[ "$VERBOSE" != no ] && echo "Re-starting $DESC" "$NAME"
+	[ "$VERBOSE" != no ] && log_daemon_msg "Re-starting $DESC" "$NAME"
 	$NEUCAD restart
 	;;
   *)
