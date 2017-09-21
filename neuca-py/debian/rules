@@ -1,27 +1,15 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
 
-INIT_PATH = $(shell readlink -f /sbin/init)
-INIT_TYPE = $(shell basename $(INIT_PATH))
-
 export PYBUILD_NAME=neuca_guest_tools
 
 %:
-ifeq (systemd, $(INIT_TYPE))
 	dh $@ --with python2 --with systemd --buildsystem=pybuild
-else
-	dh $@ --with python2 --buildsystem=pybuild
-endif
 
 override_dh_installinit:
 	dh_installinit --no-start
 
 override_dh_systemd_start:
 	echo "Not running dh_systemd_start"
-
-clean:
-ifeq (systemd, $(INIT_TYPE))
-	sed -i '/^Build-Depends:/ s/$$/\,\ dh-systemd\ \(\>\=1\.5\)/' debian/control
-endif
 
 DEB_PYTHON2_MODULE_PACKAGES:=neuca-guest-tools
