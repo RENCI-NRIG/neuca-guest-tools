@@ -1150,6 +1150,48 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     self.log.error('Exception was of type: %s'
                                    % (str(type(e))))
 
+    def __triggerUdev(self):
+        """
+        Force udev to re-scan any new udev files that may have been created,
+        then force a trigger of udev to process any newly defined rules (in
+        this case, only for network interfaces).
+        """
+        command = 'udevadm'
+        paths = ['./', '/sbin', '/usr/sbin']
+
+        executable = self.__findCommandInPaths(command, paths)
+        if executable is None:
+            self.log.error(('Executable %s does not exist ' +
+                            'in paths: %s')
+                           % (command, str(paths)))
+            return
+
+        # First, force the re-scan.
+        cmd = [
+            executable,
+            'control', '--reload-rules'
+        ]
+        self.log.info('Attempting to reload udev rules.')
+        rtncode = subprocess.call(cmd)
+        if rtncode != 0:
+            self.log.warning('Request of udev rule reload failed!')
+            return
+        else:
+            self.log.debug('Rule reload request succeeded.')
+
+        # Now, trigger the re-process of newly defined rules.
+        cmd = [
+            executable,
+            'trigger', '--attr-match=subsystem=net'
+        ]
+        self.log.info('Re-triggering net device rule processing for udev')
+        rtncode = subprocess.call(cmd)
+        if rtncode != 0:
+            self.log.warning('Request of udev rule re-trigger failed!')
+            return
+        else:
+            self.log.debug('Rule re-trigger request succeeded.')
+
     def __updateHostsFile(self, loopbackAddress, hostName):
         """
         Maintains the loopback entries added to /etc/hosts for novice users.
@@ -1228,6 +1270,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                                                     self.udevDataPrio)
 
             if updateIface or self.firstRun:
+                # Make sure that any newly generated udev files are processed.
+                self.__triggerUdev()
                 # address_type is currently unused, but will be in future.
                 try:
                     # address_type = config[1]
