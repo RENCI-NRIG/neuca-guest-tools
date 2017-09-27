@@ -284,14 +284,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 iface, state
             ]
             rtncode = subprocess.call(cmd)
-            if rtncode != 0:
+            if rtncode == 0:
+                self.log.debug('Changed state for interface %s to: %s'
+                               % (iface, state))
+            else:
                 self.log.warning(('Unable to bring interface %s %s ' +
                                   'at this time.')
                                  % (iface, state))
                 return
-            else:
-                self.log.debug('Changed state for interface %s to: %s'
-                               % (iface, state))
 
             if ('up' == state and cidr is not None):
                 # We need to assign a CIDR to an interface.
@@ -340,15 +340,15 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         iface
                     ]
                     rtncode = subprocess.call(cmd)
-                    if rtncode != 0:
+                    if rtncode == 0:
+                        self.log.debug(('Flushed addresses on interface ' +
+                                        '%s due to change in configuration.')
+                                       % iface)
+                    else:
                         self.log.warning(('Unable to flush addresses ' +
                                           'on interface %s at this time.')
                                          % iface)
                         return
-                    else:
-                        self.log.debug(('Flushed addresses on interface ' +
-                                        '%s due to change in configuration.')
-                                       % iface)
 
                     cmd = [
                         executable,
@@ -359,14 +359,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         iface
                     ]
                     rtncode = subprocess.call(cmd)
-                    if rtncode != 0:
+                    if rtncode == 0:
+                        self.log.debug('Address %s configured on interface %s'
+                                       % (cidr, iface))
+                    else:
                         self.log.warning(('Unable to set address %s ' +
                                           'on interface %s at this time.')
                                          % (cidr, iface))
                         return
-                    else:
-                        self.log.debug('Address %s configured on interface %s'
-                                       % (cidr, iface))
             elif ('up' == state and cidr is None):
                 self.log.debug(('CIDR unset for interface %s, but ' +
                                 'state is "%s"; leaving in user control.')
@@ -1173,11 +1173,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         ]
         self.log.info('Attempting to reload udev rules.')
         rtncode = subprocess.call(cmd)
-        if rtncode != 0:
+        if rtncode == 0:
+            self.log.debug('Rule reload request succeeded.')
+        else:
             self.log.warning('Request of udev rule reload failed!')
             return
-        else:
-            self.log.debug('Rule reload request succeeded.')
 
         # Now, trigger the re-process of newly defined rules.
         cmd = [
@@ -1186,11 +1186,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         ]
         self.log.info('Re-triggering net device rule processing for udev')
         rtncode = subprocess.call(cmd)
-        if rtncode != 0:
+        if rtncode == 0:
+            self.log.debug('Rule re-trigger request succeeded.')
+        else:
             self.log.warning('Request of udev rule re-trigger failed!')
             return
-        else:
-            self.log.debug('Rule re-trigger request succeeded.')
 
     def __updateHostsFile(self, loopbackAddress, hostName):
         """
@@ -1497,12 +1497,12 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 str(new_hostname)
             ]
             rtncode = subprocess.call(cmd)
-            if rtncode != 0:
-                self.log.error('Failed to set hostname.')
-                return
-            else:
+            if rtncode == 0:
                 self.log.debug('Hostname changed to: %s'
                                % str(new_hostname))
+            else:
+                self.log.error('Failed to set hostname.')
+                return
 
         set_loopback = True
         try:
