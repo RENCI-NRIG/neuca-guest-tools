@@ -1150,6 +1150,43 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     self.log.error('Exception was of type: %s'
                                    % (str(type(e))))
 
+    def __disableNetworkManager(self, systemIfaceName):
+        """
+        Disable NetworkManager management for the interface in question,
+        if NetworkManager is found to be present.
+        Sadly, just setting NM_UNMANAGED from udev is insufficient.
+        """
+        command = 'nmcli'
+        paths = ['./', '/bin', '/usr/bin', '/sbin', '/usr/sbin']
+
+        executable = self.__findCommandInPaths(command, paths)
+        if executable is None:
+            self.log.debug(('Executable %s does not exist ' +
+                            'in paths: %s')
+                           % (command, str(paths)))
+            self.log.debug(('NetworkManager is probably not installed; ' +
+                            'lucky you!'))
+            return
+
+        # Set the interface as unmanaged.
+        cmd = [
+            executable,
+            'device', 'set',
+            systemIfaceName,
+            'managed', 'no'
+        ]
+        self.log.info('Attempting to mark %s as unmanaged for NetworkManager'
+                      % systemIfaceName)
+        rtncode = subprocess.call(cmd)
+        if rtncode == 0:
+            self.log.debug('Interface %s successfully marked as unmanaged.'
+                           % systemIfaceName)
+        else:
+            self.log.warning(('Interface %s could not be marked unmanaged ' +
+                              'in NetworkManager. Unexpected behavior ' +
+                              'is likely.'))
+            return
+
     def __triggerUdev(self):
         """
         Force udev to re-scan any new udev files that may have been created,
@@ -1272,6 +1309,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             if updateIface or self.firstRun:
                 # Make sure that any newly generated udev files are processed.
                 self.__triggerUdev()
+                # Make sure that NetworkManager sods off, for any
+                # dataplane interfaces.
+                self.__disableNetworkManager(sysName)
                 # address_type is currently unused, but will be in future.
                 try:
                     # address_type = config[1]
