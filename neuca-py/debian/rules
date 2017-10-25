@@ -3,7 +3,7 @@
 
 UBUNTU_VERSION = $(shell lsb_release -sr)
 UBUNTU_MAJOR_VERSION = $(shell echo $(UBUNTU_VERSION) | sed -e 's/\...$$//')
-UBUNTU_NEWER_THAN_1710 = $(shell test $(UBUNTU_MAJOR_VERSION) -lt 17; echo $$?)
+UBUNTU_NEWER_THAN_1710 = $(shell test $(UBUNTU_MAJOR_VERSION) -gt 17; echo $$?)
 
 export PYBUILD_NAME=neuca_guest_tools
 
@@ -21,7 +21,7 @@ ifeq ($(UBUNTU_VERSION), 17.10)
 	sed -i '/^Build-Depends:/ s/,\ dh-systemd.*$$//' debian/control
 	sed -i '/^Build-Depends:/ s/>=\ 9/>=\ 9\.20160709/' debian/control
 endif
-ifeq ($(UBUNTU_NEWER_THAN_1710), 1)
+ifeq ($(UBUNTU_NEWER_THAN_1710), 0)
 	sed -i '/^Build-Depends:/ s/,\ dh-systemd.*$$//' debian/control
 	sed -i '/^Build-Depends:/ s/>=\ 9/>=\ 9\.20160709/' debian/control
 endif
