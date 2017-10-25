@@ -1,6 +1,10 @@
 #!/usr/bin/make -f
 #export DH_VERBOSE=1
 
+UBUNTU_VERSION = $(shell lsb_release -sr)
+UBUNTU_MAJOR_VERSION = $(shell echo $(UBUNTU_VERSION) | sed -e 's/\...$$//')
+UBUNTU_NEWER_THAN_1710 = $(shell test $(UBUNTU_MAJOR_VERSION) -lt 17; echo $$?)
+
 export PYBUILD_NAME=neuca_guest_tools
 
 %:
@@ -11,5 +15,15 @@ override_dh_installinit:
 
 override_dh_systemd_start:
 	echo "Not running dh_systemd_start"
+
+clean:
+ifeq ($(UBUNTU_VERSION), 17.10)
+	sed -i '/^Build-Depends:/ s/,\ dh-systemd.*$$//' debian/control
+	sed -i '/^Build-Depends:/ s/>=\ 9/>=\ 9\.20160709/' debian/control
+endif
+ifeq ($(UBUNTU_NEWER_THAN_1710), 1)
+	sed -i '/^Build-Depends:/ s/,\ dh-systemd.*$$//' debian/control
+	sed -i '/^Build-Depends:/ s/>=\ 9/>=\ 9\.20160709/' debian/control
+endif
 
 DEB_PYTHON2_MODULE_PACKAGES:=neuca-guest-tools
