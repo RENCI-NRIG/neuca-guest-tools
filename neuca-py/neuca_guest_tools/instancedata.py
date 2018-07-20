@@ -21,10 +21,12 @@
 import ConfigParser
 import time
 import boto.utils
+import json
 
 from neuca_guest_tools import CONFIG
 from neuca_guest_tools import _ConfDir as neuca_ConfDir
 from neuca_guest_tools.util import TempFile
+from comet_common_iface import *
 
 
 class NEucaInstanceData(object):
@@ -69,27 +71,91 @@ class NEucaInstanceData(object):
 
     def getUserDataField(self, section, field):
         try:
-            return self.config.get(section, field)
+	    if section == 'global' or self.getCometHost() is None :
+                return self.config.get(section, field)
+            else :
+                return self.getCometDataField(section, field)
         except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
             return None
 
+    def getCometDataField(self, section, field):
+        secData = self.getCometData(section)
+        if secData is not None :
+            secJson = json.loads(secData)
+            for s in secJson :
+		for value in s.values() :
+		  if value == field :
+		     return json.dumps(s)
+	return None
+
+    def getCometData(self, section):
+        sliceId = self.getUserDataField("global", "slice_id")
+        unitId = self.getUserDataField("global", "unit_id")
+        readToken = self.getUserDataField("global", "cometreadtoken")
+        if sliceId is not None and unitId is not None and readToken is not None:
+            comet = CometInterface(self.getCometHost(), None, None, None)
+            resp = comet.get_family(sliceId, unitId, readToken, section)
+            if resp.status_code != 200:
+                print ("Failure occured in fetching family from comet" + section)
+                return None
+            if resp.json()["value"].get("error") :
+                print ("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
+		return None
+            elif resp.json()["value"] :
+                value = resp.json()["value"]["value"]
+                if value is not None :
+                    secData = json.loads(json.loads(value)["val_"])
+                    return json.dumps(secData)
+            else:
+                return None
+        else :
+            print("sliceId/unitId/readToken could not be determined")
+            return None
+
     def getBootScript(self):
-        return self.getUserDataField('scripts', 'bootscript')
+        if self.getCometHost() is not None :
+            scripts = self.getCometData('scripts')
+            if scripts is not None :
+                scriptsJson = json.loads(scripts)
+                for script in scriptsJson :
+                   if script["scriptName"] == "bootscript" :
+                       return json.dumps(script)
+            return None
+        else :
+            return self.getUserDataField('scripts', 'bootscript')
 
     def getAllScripts(self):
-        return self.config.items('scripts')
+        if self.getCometHost() is not None :
+            return self.getCometData('scripts')
+        else :
+            return self.config.items('scripts')
 
     def getInterface(self, iface):
         return self.getUserDataField('interfaces', iface)
 
     def getAllInterfaces(self):
-        return self.config.items('interfaces')
+         if self.getCometHost() is not None :
+             return self.getCometData('interfaces')
+         else :
+             return self.config.items('interfaces')
+
+    def getAllUsers(self):
+        if self.getCometHost() is not None :
+            return self.getCometData('users')
+        else :
+            return self.config.items('users')
 
     def getAllStorage(self):
-        return self.config.items('storage')
+        if self.getCometHost() is not None :
+            return self.getCometData('storage')
+        else :
+            return self.config.items('storage')
 
     def getAllRoutes(self):
-        return self.config.items('routes')
+        if self.getCometHost() is not None :
+            return self.getCometData('routes')
+        else :
+            return self.config.items('routes')
 
     def getPublicIP(self):
         return self.publicIP
@@ -116,3 +182,6 @@ class NEucaInstanceData(object):
         if iqn:
             iqn = iqn.strip()
         return iqn
+
+    def getCometHost(self):
+        return self.config.get("global", "comethost")
