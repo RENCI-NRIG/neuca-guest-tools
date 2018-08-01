@@ -40,7 +40,7 @@ class NEucaInstanceData(object):
         self.storage = None
         self.scripts = None
         self.routes = None
-        
+
         try:
             self.__testing__ = CONFIG.getboolean('runtime', 'testing')
         except Exception:
@@ -99,26 +99,26 @@ class NEucaInstanceData(object):
             result = []
             for s in storage :
                 device=str(s["device"])
-                config=str(s["storageType"]) 
-                config+=":" 
-                config+=str(s["targetIp"]) 
-                config+=":" 
-                config+=str(s["targetPort"]) 
-                config+=":" 
-                config+=str(s["targetLun"]) 
-                config+=":" 
-                config+=str(s["targetChapUser"]) 
-                config+=":" 
+                config=str(s["storageType"])
+                config+=":"
+                config+=str(s["targetIp"])
+                config+=":"
+                config+=str(s["targetPort"])
+                config+=":"
+                config+=str(s["targetLun"])
+                config+=":"
+                config+=str(s["targetChapUser"])
+                config+=":"
                 config+=str(s["targetChapSecret"])
-                config+=":" 
+                config+=":"
                 config+=str(s["targetShouldAttach"])
-                config+=":" 
+                config+=":"
                 config+=str(s["fsType"])
-                config+=":" 
-                config+=str(s["fsOptions"]) 
-                config+=":" 
-                config+=str(s["fsShouldFormat"]) 
-                config+=":" 
+                config+=":"
+                config+=str(s["fsOptions"])
+                config+=":"
+                config+=str(s["fsShouldFormat"])
+                config+=":"
                 config+=str(s["fsMountPoint"])
                 tup = device, config
                 result.append(tup)
@@ -226,7 +226,7 @@ class NEucaInstanceData(object):
 
     def getAllScripts(self):
         if self.getCometHost() is not None :
-            return self.scripts 
+            return self.scripts
         else :
             return self.config.items('scripts')
 
@@ -253,7 +253,7 @@ class NEucaInstanceData(object):
 
     def getAllRoutes(self):
         if self.getCometHost() is not None :
-            return self.storage 
+            return self.routes
         else :
             return self.config.items('routes')
 
