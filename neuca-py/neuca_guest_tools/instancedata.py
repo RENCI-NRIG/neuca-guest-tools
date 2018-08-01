@@ -35,6 +35,12 @@ class NEucaInstanceData(object):
         self.publicIP = None
         self.userData = None
         self.fetchTime = 0
+        self.interfaces = None
+        self.users = None
+        self.storage = None
+        self.scripts = None
+        self.routes = None
+        
         try:
             self.__testing__ = CONFIG.getboolean('runtime', 'testing')
         except Exception:
@@ -45,6 +51,98 @@ class NEucaInstanceData(object):
         rtnStr = f.read()
         f.close()
         return rtnStr
+
+    def updateInterfacesFromComet(self):
+        interfaces=self.getCometData('interfaces')
+        if interfaces is not None:
+            result = []
+            for i in interfaces:
+                mac=str(i["mac"])
+                value=str(i["state"])
+                value+=":"
+                value+=str(i["ipVersion"])
+                value+=":"
+                if i.get("ip") :
+                    value+=str(i["ip"])
+                tup=mac,value
+                result.append(tup)
+            return result
+        return None
+
+    def updateScriptsFromComet(self):
+        scripts = self.getCometData('scripts')
+        if scripts is not None :
+            result = []
+            for s in scripts:
+                scriptName=str(s["scriptName"])
+                scriptBody=str(s["scriptBody"])
+                tup=scriptName,scriptBody
+                result.append(tup)
+            return result
+        return None
+
+    def updateRoutesFromComet(self):
+        routes = self.getCometData('routes')
+        if routes is not None :
+            result = []
+            for r in routes:
+                routeNetwork=str(r["routeNetwork"])
+                routeNextHop=str(r["routeNextHop"])
+                tup = routeNetwork, routeNextHop
+                result.append(tup)
+            return result
+        return None
+
+    def updateStorageFromComet(self):
+        storage = self.getCometData('storage')
+        if storage is not None:
+            result = []
+            for s in storage :
+                device=str(s["device"])
+                config=str(s["storageType"]) 
+                config+=":" 
+                config+=str(s["targetIp"]) 
+                config+=":" 
+                config+=str(s["targetPort"]) 
+                config+=":" 
+                config+=str(s["targetLun"]) 
+                config+=":" 
+                config+=str(s["targetChapUser"]) 
+                config+=":" 
+                config+=str(s["targetChapSecret"])
+                config+=":" 
+                config+=str(s["targetShouldAttach"])
+                config+=":" 
+                config+=str(s["fsType"])
+                config+=":" 
+                config+=str(s["fsOptions"]) 
+                config+=":" 
+                config+=str(s["fsShouldFormat"]) 
+                config+=":" 
+                config+=str(s["fsMountPoint"])
+                tup = device, config
+                result.append(tup)
+            return result
+        return None
+
+    def updateUsersFromComet(self):
+        users = self.getCometData('users')
+        if users is not None :
+            result = []
+            for u in users :
+                login=str(u["user"])
+                sudokeys=str(u["sudo"]) + ":" + str(u["key"])
+                tup = login, sudokeys
+                result.append(tup)
+            return result
+        return None
+
+    def updateCometData(self):
+        self.interfaces = self.updateInterfacesFromComet()
+        self.scripts = self.updateScriptsFromComet()
+        self.routes = self.updateRoutesFromComet()
+        self.users = self.updateUsersFromComet()
+        self.storage = self.updateStorageFromComet()
 
     def updateInstanceData(self):
         # Local assignments, in order to shorten things.
@@ -65,13 +163,16 @@ class NEucaInstanceData(object):
         self.config = ConfigParser.RawConfigParser()
         self.config.read(fh.path)
 
+        if self.getCometHost() is not None :
+            self.updateCometData()
+
         # Finally, record when this instanceData was fetched, so we
         # know how "fresh" it is.
         self.fetchTime = time.time()
 
     def getUserDataField(self, section, field):
         try:
-	    if section == 'global' or self.getCometHost() is None :
+            if section == 'global' or self.getCometHost() is None :
                 return self.config.get(section, field)
             else :
                 return self.getCometDataField(section, field)
@@ -79,54 +180,53 @@ class NEucaInstanceData(object):
             return None
 
     def getCometDataField(self, section, field):
-        secData = self.getCometData(section)
-        if secData is not None :
-            secJson = json.loads(secData)
-            for s in secJson :
-		for value in s.values() :
-		  if value == field :
-		     return json.dumps(s)
-	return None
+        secData = None
+        if section == 'interfaces' :
+            secData = self.interfaces
+        elif section == 'users' :
+            secData = self.users
+        elif section == 'scripts' :
+            secData = self.scripts
+        elif section == 'routes' :
+            secData = self.routes
+        elif section == 'storage' :
+            secData = self.storage
+        if secData is not None:
+            for s in secData:
+                if s[0] == field :
+                    return s[1]
+        return None
 
     def getCometData(self, section):
         sliceId = self.getUserDataField("global", "slice_id")
-        unitId = self.getUserDataField("global", "unit_id")
+        rId = self.getUserDataField("global", "reservation_id")
         readToken = self.getUserDataField("global", "cometreadtoken")
-        if sliceId is not None and unitId is not None and readToken is not None:
+        if sliceId is not None and rId is not None and readToken is not None:
             comet = CometInterface(self.getCometHost(), None, None, None)
-            resp = comet.get_family(sliceId, unitId, readToken, section)
+            resp = comet.get_family(sliceId, rId, readToken, section)
             if resp.status_code != 200:
                 print ("Failure occured in fetching family from comet" + section)
                 return None
             if resp.json()["value"].get("error") :
                 print ("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
-		return None
+                return None
             elif resp.json()["value"] :
                 value = resp.json()["value"]["value"]
                 if value is not None :
                     secData = json.loads(json.loads(value)["val_"])
-                    return json.dumps(secData)
+                    return secData
             else:
                 return None
         else :
-            print("sliceId/unitId/readToken could not be determined")
+            print("sliceId/rId/readToken could not be determined")
             return None
 
     def getBootScript(self):
-        if self.getCometHost() is not None :
-            scripts = self.getCometData('scripts')
-            if scripts is not None :
-                scriptsJson = json.loads(scripts)
-                for script in scriptsJson :
-                   if script["scriptName"] == "bootscript" :
-                       return json.dumps(script)
-            return None
-        else :
-            return self.getUserDataField('scripts', 'bootscript')
+        return self.getUserDataField('scripts', 'bootscript')
 
     def getAllScripts(self):
         if self.getCometHost() is not None :
-            return self.getCometData('scripts')
+            return self.scripts 
         else :
             return self.config.items('scripts')
 
@@ -134,26 +234,26 @@ class NEucaInstanceData(object):
         return self.getUserDataField('interfaces', iface)
 
     def getAllInterfaces(self):
-         if self.getCometHost() is not None :
-             return self.getCometData('interfaces')
-         else :
-             return self.config.items('interfaces')
+        if self.getCometHost() is not None :
+            return self.interfaces
+        else :
+            return self.config.items('interfaces')
 
     def getAllUsers(self):
         if self.getCometHost() is not None :
-            return self.getCometData('users')
+            return self.users
         else :
             return self.config.items('users')
 
     def getAllStorage(self):
         if self.getCometHost() is not None :
-            return self.getCometData('storage')
+            return self.storage
         else :
             return self.config.items('storage')
 
     def getAllRoutes(self):
         if self.getCometHost() is not None :
-            return self.getCometData('routes')
+            return self.storage 
         else :
             return self.config.items('routes')
 
@@ -184,4 +284,7 @@ class NEucaInstanceData(object):
         return iqn
 
     def getCometHost(self):
-        return self.config.get("global", "comethost")
+        try:
+            return self.config.get("global", "comethost")
+        except Exception:
+            return None

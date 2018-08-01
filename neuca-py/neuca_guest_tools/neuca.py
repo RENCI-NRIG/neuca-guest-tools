@@ -212,9 +212,8 @@ def main():
         if userScripts is None:
             print "Not found"
 	else :
-            scriptsJson = json.loads(userScripts)
-            for script in scriptsJson:
-                print json.dumps(script)
+            for script in userScripts:
+                print script
 
     if invokeName == 'neuca-user-data':
         print customizer.getUserData()

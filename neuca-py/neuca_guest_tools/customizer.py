@@ -1137,11 +1137,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             freshUdevs = {}
             staleUdevs = []
             for iface in interfaceList:
-                mac = None
-        	if self.instanceData.getCometHost is None:
-                   mac = iface[0]
-                else:
-                   mac = iface["mac"]
+                mac = iface[0]
                 udevFile = ('%s/%d-%s-%s.rules'
                             % (self.udevDirectory,
                                self.udevDataPrio,
@@ -1303,43 +1299,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.__rescanPCI()
 
         # Fetch the list of dataplane interfaces.
-        result = self.instanceData.getAllInterfaces()
-        interfaces = []
+        interfaces = self.instanceData.getAllInterfaces()
         systemIfaces = self.__getPhysicalIfacesByMac()
-        if self.instanceData.getCometHost is None:
-            interfaces = result
-        else:
-            if result is not None:
-               interfaces = json.loads(result)
         for iface in interfaces:
-            mac = None
-            config = None
-            state = None
-            cidr = None
-            if self.instanceData.getCometHost is None:
-                mac = iface[0]
-                config = iface[1].split(':')
-                state = config[0]
-                # address_type is currently unused, but will be in future.
-                try:
-                    # address_type = config[1]
-                    cidr = config[2]
-                except:
-                    # address_type = None
-                    cidr = None
-            else:
-                mac = iface["mac"]
-                config = json.dumps(iface)
-                state = iface["state"]
-                # address_type is currently unused, but will be in future.
-                try:
-                    # address_type = iface["ipVersion"]
-                    cidr = iface["ip"]
-                except:
-                    # address_type = None
-                    cidr = None
+            mac = iface[0]
+            config = iface[1].split(':')
+            state = config[0]
 
-	    print("KOMAL config=" + config)
             # Get the system name for the dataplane interface from
             # the system interface hash, then remove it from the
             # hash and update the udev file.
@@ -1356,6 +1322,13 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 # Make sure that NetworkManager sods off, for any
                 # dataplane interfaces.
                 self.__disableNetworkManager(sysName)
+                # address_type is currently unused, but will be in future.
+                try:
+                   # address_type = config[1]
+                   cidr = config[2]
+                except:
+                   # address_type = None
+                   cidr = None
                 self.__updateInterface(mac, state, cidr)
             else:
                 self.log.debug(('Not updating interface for MAC %s ' +
@@ -1380,33 +1353,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         # update routes
         self.__updateRouter(self.isRouter())
-        result = self.getAllRoutes()
-        routes = []
-        if self.instanceData.getCometHost is None:
-            routes = result
-        else:
-            if result is not None:
-               routes = json.loads(result)
-
+        routes = self.getAllRoutes()
         for route in routes:
-            if self.instanceData.getCometHost is None:
-                self.__updateRoute(route[0], route[1])
-            else:
-                self.__updateRoute(route["routeNetwork"], route["routeNextHop"])
+            self.__updateRoute(route[0], route[1])
 
     def runNewScripts(self):
-        result = self.instanceData.getAllScripts()
-        scripts = []
-        if self.instanceData.getCometHost is None:
-            scripts = result
-        else:
-            if result is not None:
-                scripts = json.loads(result)
+        scripts = self.instanceData.getAllScripts()
         for s in scripts:
-            if self.instanceData.getCometHost is None:
-                script = NeucaScript(s[0], s[1])
-            else:
-                script = NeucaScript(s["scriptName"], s["scriptBody"])
+            script = NeucaScript(s[0], s[1])
             script.run()
 
     def updateStorage(self):
@@ -1420,61 +1374,28 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         self.__updateISCSI_initiator(iscsi_iqn)
 
-        result = self.instanceData.getAllStorage()
-        storage_list = []
-        if self.instanceData.getCometHost is None:
-            storage_list = result
-        else:
-            if result is not None:
-                storage_list = json.loads(result)
-
+        storage_list = self.instanceData.getAllStorage()
         for device in storage_list:
-            dev_name = None
-            dev_fields = None
-            proto = None
-            if self.instanceData.getCometHost is None:
-                dev_name = device[0]
-                dev_fields = dict(enumerate(device[1].split(':')))
-                proto = dev_fields.get(0)
-            else:
-                dev_name = device["device"]
-                proto = device["storageType"]
+            dev_name = device[0]
+            dev_fields = dict(enumerate(device[1].split(':')))
+
+            proto = dev_fields.get(0)
             if proto == 'iscsi':
                 try:
-                    if self.instanceData.getCometHost is None:
-                        ip = dev_fields.get(1)
-                        port = dev_fields.get(2)
-                        lun = dev_fields.get(3)
-                        chap_user = dev_fields.get(4)
-                        chap_pass = dev_fields.get(5)
-                        shouldAttach = dev_fields.get(6)
+                    ip = dev_fields.get(1)
+                    port = dev_fields.get(2)
+                    lun = dev_fields.get(3)
+                    chap_user = dev_fields.get(4)
+                    chap_pass = dev_fields.get(5)
+                    shouldAttach = dev_fields.get(6)
 
-                        # The following fields may not exist.
-                        # Since we are doing a get() on a dict, however,
-                        # they'll default to None if non-existent.
-                        fs_type = dev_fields.get(7)
-                        fs_options = dev_fields.get(8)
-                        fs_shouldFormat = dev_fields.get(9)
-                        mount_point = dev_fields.get(10)
-                    else:
-                        ip = device["targetIp"]
-                        port = device["targetPort"]
-                        lun = device["targetLun"]
-                        chap_user = device["targetChapUser"]
-                        chap_pass = device["targetChapSecret"]
-                        shouldAttach = device["targetShouldAttach"]
-
-                        # The following fields may not exist.
-                        # Since we are doing a get() on a dict, however,
-                        # they'll default to None if non-existent.
-                        if device["fsType"]:
-                            fs_type = device["fsType"]
-                        if device["fsOptions"]:
-                            fs_options = device["fsOptions"]
-                        if device["fsShouldFormat"]:
-                            fs_shouldFormat = device["fsShouldFormat"]
-                        if device["fsMountPoint"]:
-                            mount_point = device["fsMountPoint"]
+                    # The following fields may not exist.
+                    # Since we are doing a get() on a dict, however,
+                    # they'll default to None if non-existent.
+                    fs_type = dev_fields.get(7)
+                    fs_options = dev_fields.get(8)
+                    fs_shouldFormat = dev_fields.get(9)
+                    mount_point = dev_fields.get(10)
 
                     if (
                             self.__checkISCSI_handled(dev_name, ip, port, lun,
