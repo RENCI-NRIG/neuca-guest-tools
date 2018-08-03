@@ -203,7 +203,7 @@ class NEucaInstanceData(object):
         readToken = self.getUserDataField("global", "cometreadtoken")
         if sliceId is not None and rId is not None and readToken is not None:
             comet = CometInterface(self.getCometHost(), None, None, None)
-            resp = comet.get_family(sliceId, rId, readToken, section)
+            resp = comet.invokeRoundRobinApi('get_family', sliceId, rId, readToken, None, section, None)
             if resp.status_code != 200:
                 print ("Failure occured in fetching family from comet" + section)
                 return None
