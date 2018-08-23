@@ -49,7 +49,7 @@ class NEucad():
         self.pidDir = CONFIG.get('runtime', 'pid-directory')
 
         self.stdin_path = '/dev/null'
-        self.stdout_path = '/root/comet'
+        self.stdout_path = '/dev/null'
         self.stderr_path = '/dev/null'
         self.pidfile_path = (self.pidDir +
                              '/' +
@@ -211,7 +211,7 @@ def main():
         userScripts = customizer.getAllScripts()
         if userScripts is None:
             print "Not found"
-	else :
+        else :
             for script in userScripts:
                 print script
 
@@ -219,32 +219,32 @@ def main():
         print customizer.getUserData()
 
     if invokeName == 'neuca-interfaces':
-	interfaces = customizer.getAllInterfaces()
+        interfaces = customizer.getAllInterfaces()
         if interfaces is None:
             print "Not found"
-	else :
+        else :
             print interfaces
 
     if invokeName == 'neuca-storage':
-	storages = customizer.getAllStorage()
+        storages = customizer.getAllStorage()
         if storages is None:
             print "Not found"
-	else :
+        else :
             print storages
 
     if invokeName == 'neuca-users':
-	users = customizer.getAllUsers()
+        users = customizer.getAllUsers()
         if users is None:
             print "Not found"
-	else :
+        else :
             print users
 
     if invokeName == 'neuca-routes':
         print 'Router: ' + str(customizer.isRouter())
-	routes = customizer.getAllRoutes()
+        routes = customizer.getAllRoutes()
         if routes is None:
             print "Not found"
-	else :
+        else :
             print routes
 
     if invokeName == 'neuca-get-public-ip':
