@@ -24,7 +24,6 @@ import socket
 import subprocess
 import time
 import glob
-import json
 
 from neuca_guest_tools import CONFIG, LOGGER
 from neuca_guest_tools import _IPV4_LOOPBACK_NET as loopbackNet

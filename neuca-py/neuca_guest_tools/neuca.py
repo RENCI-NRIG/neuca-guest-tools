@@ -24,7 +24,6 @@ import sys
 import os
 
 import time
-import json
 
 from neuca_guest_tools import CONFIG, LOGGER
 from neuca_guest_tools import __version__ as neuca_version
