@@ -1312,7 +1312,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             updateIface = False
             if sysName:
                 del systemIfaces[mac]
-                updateIface = self.__updateUdevFile(mac, sysName, config,
+                updateIface = self.__updateUdevFile(mac, sysName, iface[1],
                                                     self.udevDataPrio)
 
             if updateIface or self.firstRun:
@@ -1353,11 +1353,15 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         # update routes
         self.__updateRouter(self.isRouter())
         routes = self.getAllRoutes()
+        if routes is None:
+            return
         for route in routes:
             self.__updateRoute(route[0], route[1])
 
     def runNewScripts(self):
         scripts = self.instanceData.getAllScripts()
+        if scripts is None:
+            return
         for s in scripts:
             script = NeucaScript(s[0], s[1])
             script.run()
@@ -1374,6 +1378,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.__updateISCSI_initiator(iscsi_iqn)
 
         storage_list = self.instanceData.getAllStorage()
+        if storage_list is None:
+            return
         for device in storage_list:
             dev_name = device[0]
             dev_fields = dict(enumerate(device[1].split(':')))
