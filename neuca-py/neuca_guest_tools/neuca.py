@@ -132,6 +132,12 @@ def main():
               'to execute any newly created user-specified post-boot scripts')
         print('\tneuca-user-data - to retrieve full user data')
         print('\tneuca-get - to retrieve specific items from user data')
+        print('\tneuca-storage - ' +
+              'to retrieve all storage devices configured')
+        print('\tneuca-users - ' +
+              'to retrieve all users configured')
+        print('\tneuca-interfaces - ' +
+              'to retrieve all network interfaces')
         print('\tneuca-routes - ' +
               'to show whether host has been specified ' +
               'as a router, and get all routes')
@@ -202,15 +208,43 @@ def main():
 
     if invokeName == 'neuca-all-user-scripts':
         userScripts = customizer.getAllScripts()
-        for script in userScripts:
-            print script
+        if userScripts is None:
+            print "Not found"
+        else :
+            for script in userScripts:
+                print script
 
     if invokeName == 'neuca-user-data':
         print customizer.getUserData()
 
+    if invokeName == 'neuca-interfaces':
+        interfaces = customizer.getAllInterfaces()
+        if interfaces is None:
+            print "Not found"
+        else :
+            print interfaces
+
+    if invokeName == 'neuca-storage':
+        storages = customizer.getAllStorage()
+        if storages is None:
+            print "Not found"
+        else :
+            print storages
+
+    if invokeName == 'neuca-users':
+        users = customizer.getAllUsers()
+        if users is None:
+            print "Not found"
+        else :
+            print users
+
     if invokeName == 'neuca-routes':
         print 'Router: ' + str(customizer.isRouter())
-        print customizer.getAllRoutes()
+        routes = customizer.getAllRoutes()
+        if routes is None:
+            print "Not found"
+        else :
+            print routes
 
     if invokeName == 'neuca-get-public-ip':
         print customizer.getPublicIP()

@@ -80,6 +80,15 @@ class NEucaOSCustomizer(object):
     def getISCSI_iqn(self):
         return self.instanceData.getISCSI_iqn()
 
+    def getAllStorage(self):
+        return self.instanceData.getAllStorage()
+
+    def getAllUsers(self):
+        return self.instanceData.getAllUsers()
+
+    def getAllInterfaces(self):
+        return self.instanceData.getAllInterfaces()
+
     def getAllRoutes(self):
         return self.instanceData.getAllRoutes()
 
@@ -1314,11 +1323,11 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                 self.__disableNetworkManager(sysName)
                 # address_type is currently unused, but will be in future.
                 try:
-                    # address_type = config[1]
-                    cidr = config[2]
+                   # address_type = config[1]
+                   cidr = config[2]
                 except:
-                    # address_type = None
-                    cidr = None
+                   # address_type = None
+                   cidr = None
                 self.__updateInterface(mac, state, cidr)
             else:
                 self.log.debug(('Not updating interface for MAC %s ' +
@@ -1344,11 +1353,16 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         # update routes
         self.__updateRouter(self.isRouter())
         routes = self.getAllRoutes()
+        if routes is None:
+            return
         for route in routes:
             self.__updateRoute(route[0], route[1])
 
     def runNewScripts(self):
-        for s in self.getAllScripts():
+        scripts = self.instanceData.getAllScripts()
+        if scripts is None:
+            return
+        for s in scripts:
             script = NeucaScript(s[0], s[1])
             script.run()
 
@@ -1364,7 +1378,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.__updateISCSI_initiator(iscsi_iqn)
 
         storage_list = self.instanceData.getAllStorage()
-
+        if storage_list is None:
+            return
         for device in storage_list:
             dev_name = device[0]
             dev_fields = dict(enumerate(device[1].split(':')))

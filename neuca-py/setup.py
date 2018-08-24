@@ -14,7 +14,8 @@ wrapper_script = 'neuca'
 wrapper_aliases = ['neuca-netconf', 'neuca-user-script',
                    'neuca-all-user-scripts',
                    'neuca-run-scripts', 'neuca-user-data',
-                   'neuca-get', 'neuca-routes',
+                   'neuca-get', 'neuca-routes', 'neuca-users',
+                   'neuca-interfaces', 'neuca-storage',
                    'neuca-get-public-ip', 'neuca-distro',
                    'neuca-version', 'neucad']
 
