@@ -1299,6 +1299,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         # Fetch the list of dataplane interfaces.
         interfaces = self.instanceData.getAllInterfaces()
+        if interfaces is None :
+            return
         systemIfaces = self.__getPhysicalIfacesByMac()
         for iface in interfaces:
             mac = iface[0]
