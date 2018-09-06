@@ -44,6 +44,7 @@ based on EC2 user-data passed to the instance """
 
 class NEucad():
     def __init__(self):
+        self.chameleon = False
         self.stateDir = CONFIG.get('runtime', 'state-directory')
         self.pidDir = CONFIG.get('runtime', 'pid-directory')
 
@@ -75,11 +76,12 @@ class NEucad():
             try:
                 self.log.debug('Polling')
                 self.customizer.updateInstanceData()
-                self.customizer.updateHostname()
-                self.customizer.updateNetworking()
-                self.customizer.updateStorage()
-                self.customizer.runNewScripts()
-                self.customizer.firstRun = False
+                if self.chameleon != True :
+                    self.customizer.updateHostname()
+                    self.customizer.updateNetworking()
+                    self.customizer.updateStorage()
+                    self.customizer.runNewScripts()
+                    self.customizer.firstRun = False
             except KeyboardInterrupt:
                 self.log.error('Terminating on keyboard interrupt...')
                 sys.exit(0)
@@ -120,6 +122,17 @@ def check_daemon_liveness(daemonApp):
 
 def main():
     head, invokeName = os.path.split(sys.argv[0])
+    parser = OptionParser()
+    parser.add_option(
+        '-c',
+        '--chameleon',
+        dest='chameleon',
+        action='store_true',
+        default=False,
+        help='Run the service on chameleon.'
+    )
+
+    options, args = parser.parse_args()
 
     if invokeName == 'neuca':
         print('Invoke as one of the following:')
@@ -155,9 +168,13 @@ def main():
         print 'NEuca version ' + neuca_version
         sys.exit(0)
 
+    enableChameleon = False
+    if options.chameleon:
+        enableChameleon = True
+
     # Not doing something trivial? Let's set things up.
     # First, determine the OS in use.
-    customizer = get_customizer(neuca_distro)
+    customizer = get_customizer(neuca_distro, enableChameleon)
     if customizer is None:
         sys.stderr.write('Distribution %s not supported.\n'
                          % neuca_distro)
@@ -278,6 +295,14 @@ def main():
             default=False,
             help='Run the service in foreground (useful for debugging).'
         )
+        parser.add_option(
+            '-c',
+            '--chameleon',
+            dest='chameleon',
+            action='store_true',
+            default=False,
+            help='Run the service on chameleon.'
+        )
 
         options, args = parser.parse_args()
 
@@ -311,6 +336,9 @@ def main():
         # We must wait until here to create the DaemonRunner.
         # Otherwise, it overrides our help messages.
         daemon_runner = runner.DaemonRunner(app)
+
+        if options.chameleon:
+            app.chameleon = True
 
         if options.foreground:
             try:

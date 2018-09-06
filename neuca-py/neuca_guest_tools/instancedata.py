@@ -31,9 +31,12 @@ from neuca_guest_tools import _ConfDir as neuca_ConfDir
 from neuca_guest_tools.util import TempFile
 from comet_common_iface import *
 
+urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class NEucaInstanceData(object):
-    def __init__(self):
+    def __init__(self, enableChameleon=False):
+        self.chameleon = enableChameleon
         self.log = logging.getLogger(LOGGER)
         self.config = None
         self.publicIP = None
@@ -45,6 +48,7 @@ class NEucaInstanceData(object):
         self.scripts = None
         self.routes = None
         self.neucaTmpDir = "/var/neuca"
+        self.ccMeta = None
 
         cmd = [
         "/bin/mkdir", "-p", self.neucaTmpDir
@@ -152,7 +156,7 @@ class NEucaInstanceData(object):
     def updateHostsFromComet(self):
         try:
             self.log.debug("Updating hosts locally")
-            groups = self.config.get("global", "comethostsgroupread")
+            groups = self.getUserDataField("global", "comethostsgroupread")
             if groups is None or groups == "Not Specified":
                 return
 
@@ -166,7 +170,7 @@ class NEucaInstanceData(object):
 
             for g in groups.split(",") :
                 section = "hosts" + g
-                newHosts = "" 
+                newHosts = ""
                 comet = CometInterface(self.getCometHost(), None, None, None, self.log)
                 self.log.debug("Processing section " + section)
                 resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
@@ -190,17 +194,15 @@ class NEucaInstanceData(object):
                             strToWrite = h["ip"] + " " + h["hostName"] + "\n"
                             newHosts = newHosts + strToWrite
                 strComment = "#comethosts\n"
-    
+
                 f=open("/etc/hosts", "r")
                 lines=f.readlines()
                 f.close()
                 f=open("/etc/hosts", "w")
                 for line in lines :
                     if line != strComment :
-                        print(line)
                         f.write(line)
                     else:
-                        print("breaking")
                         break
                 f.write(strComment)
                 if newHosts != "" :
@@ -213,7 +215,7 @@ class NEucaInstanceData(object):
     def updatePubKeysFromComet(self):
         try:
             self.log.debug("Updating PubKeys locally")
-            groups = self.config.get("global", "cometpubkeysgroupread")
+            groups = self.getUserDataField("global", "cometpubkeysgroupread")
             if groups is None or groups == "Not Specified":
                 return
 
@@ -242,19 +244,17 @@ class NEucaInstanceData(object):
                         for k in keys:
                             if k["publicKey"] == "" :
                                 continue
-                            newKeys = newKeys + k["publicKey"] 
+                            newKeys = newKeys + k["publicKey"]
                 strComment = "#cometkeys\n"
-    
+
                 f=open("/root/.ssh/authorized_keys", "r")
                 lines=f.readlines()
                 f.close()
                 f=open("/root/.ssh/authorized_keys", "w")
                 for line in lines :
                     if line != strComment :
-                        print(line)
                         f.write(line)
                     else:
-                        print("breaking")
                         break
                 f.write(strComment)
                 if newKeys != "" :
@@ -268,7 +268,7 @@ class NEucaInstanceData(object):
     def updatePubKeysToComet(self):
         try:
             self.log.debug("Updating PubKeys in comet")
-            groups = self.config.get("global", "cometpubkeysgroupwrite")
+            groups = self.getUserDataField("global", "cometpubkeysgroupwrite")
             if groups is None or groups == "Not Specified":
                 return
             sliceId = self.getUserDataField("global", "slice_id")
@@ -318,15 +318,15 @@ class NEucaInstanceData(object):
     def updateHostsToComet(self):
         try:
             self.log.debug("Updating Hosts in comet")
-            groups = self.config.get("global", "comethostsgroupwrite")
+            groups = self.getUserDataField("global", "comethostsgroupwrite")
             if groups is None or groups == "Not Specified":
                 return
             sliceId = self.getUserDataField("global", "slice_id")
             rId = self.getUserDataField("global", "reservation_id")
             readToken = self.getUserDataField("global", "slicecometreadtoken")
             writeToken = self.getUserDataField("global", "slicecometwritetoken")
-            hostName = self.getUserDataField("global", "host_name")
-            ip = self.getUserDataField("global", "management_ip")
+            hostName = self.getHostname()
+            ip = self.getPublicIP()
             if sliceId is not None and rId is not None and readToken is not None and writeToken is not None:
                 for g in groups.split(",") :
                     checker = None
@@ -339,6 +339,7 @@ class NEucaInstanceData(object):
                         continue
                     for h in hosts :
                         self.log.debug("Processing host " + h["hostName"])
+                        self.log.debug("h[ip]=" + h["ip"] + " ip=" + ip)
                         if h["hostName"] == hostName and h["ip"] != ip :
                             h["ip"] = ip
                             checker = True
@@ -367,7 +368,35 @@ class NEucaInstanceData(object):
         self.updatePubKeysFromComet()
         self.updateHostsFromComet()
 
+    def updateChameleonInstanceData(self):
+        try:
+            host="http://169.254.169.254"
+            headers = {
+                'Accept': 'application/json',
+            }
+            response = requests.get((host + '/openstack/latest/meta_data.json'), headers=headers, verify=False)
+            if response.status_code == 200 :
+                self.ccMeta = response.json()
+            else :
+                self.log.error("Failed to fetch cc meta data")
+            response = requests.get((host + '/latest/meta-data/public-ipv4'), headers=headers, verify=False)
+            if response.status_code == 200 :
+                self.publicIP = response._content
+            else :
+                self.log.error("Failed to fetch cc public ip")
+        except Exception as e:
+            self.log.error('updateChameleonInstanceData: Exception : %s' % (str(e)))
+
     def updateInstanceData(self):
+        if self.chameleon :
+            self.log.debug("Running on chameleon")
+            self.updateChameleonInstanceData()
+            self.updateHostsToComet()
+            self.updatePubKeysToComet()
+            self.updatePubKeysFromComet()
+            self.updateHostsFromComet()
+            return
+
         # Local assignments, in order to shorten things.
         get_meta = boto.utils.get_instance_metadata
         get_user = boto.utils.get_instance_userdata
@@ -395,11 +424,17 @@ class NEucaInstanceData(object):
 
     def getUserDataField(self, section, field):
         try:
+            if self.chameleon :
+                if field == "host_name" :
+                    return self.ccMeta["hostname"]
+                return self.ccMeta["meta"][field]
             if section == 'global' or self.getCometHost() is None :
                 return self.config.get(section, field)
             else :
                 return self.getCometDataField(section, field)
         except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
+            return None
+        except Exception:
             return None
 
     def getCometDataField(self, section, field):
@@ -485,6 +520,8 @@ class NEucaInstanceData(object):
         return self.publicIP
 
     def getUserData(self):
+        if self.chameleon :
+            return json.dumps(self.ccMeta, indent=4)
         return self.userData
 
     def getHostname(self):
@@ -509,6 +546,8 @@ class NEucaInstanceData(object):
 
     def getCometHost(self):
         try:
+            if self.chameleon :
+                return self.ccMeta["meta"]["comethost"]
             return self.config.get("global", "comethost")
         except Exception:
             return None
