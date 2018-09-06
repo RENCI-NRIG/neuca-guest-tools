@@ -47,16 +47,7 @@ class NEucaInstanceData(object):
         self.storage = None
         self.scripts = None
         self.routes = None
-        self.neucaTmpDir = "/var/neuca"
-        self.ccMeta = None
 
-        cmd = [
-        "/bin/mkdir", "-p", self.neucaTmpDir
-        ]
-        FNULL = open(os.devnull, 'w')
-        rtncode = subprocess.call(cmd, stdout=FNULL)
-        if rtncode != 0 :
-            print ("Failed to create neuca directory")
         try:
             self.__testing__ = CONFIG.getboolean('runtime', 'testing')
         except Exception:

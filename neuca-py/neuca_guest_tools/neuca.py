@@ -43,8 +43,8 @@ based on EC2 user-data passed to the instance """
 
 
 class NEucad():
-    def __init__(self):
-        self.chameleon = False
+    def __init__(self, enableChameleon =False):
+        self.chameleon = enableChameleon
         self.stateDir = CONFIG.get('runtime', 'state-directory')
         self.pidDir = CONFIG.get('runtime', 'pid-directory')
 
@@ -81,7 +81,7 @@ class NEucad():
                     self.customizer.updateNetworking()
                     self.customizer.updateStorage()
                     self.customizer.runNewScripts()
-                    self.customizer.firstRun = False
+                self.customizer.firstRun = False
             except KeyboardInterrupt:
                 self.log.error('Terminating on keyboard interrupt...')
                 sys.exit(0)
@@ -205,7 +205,7 @@ def main():
 
     # Finally, create a daemon object instance;
     # we'll use it to check for daemon liveness, if nothing else.
-    app = NEucad()
+    app = NEucad(enableChameleon)
     app.customizer = customizer
 
     if invokeName == 'neuca-netconf':
@@ -336,9 +336,6 @@ def main():
         # We must wait until here to create the DaemonRunner.
         # Otherwise, it overrides our help messages.
         daemon_runner = runner.DaemonRunner(app)
-
-        if options.chameleon:
-            app.chameleon = True
 
         if options.foreground:
             try:
