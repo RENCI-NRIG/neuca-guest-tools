@@ -36,6 +36,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class NEucaInstanceData(object):
     def __init__(self, enableChameleon=False):
+        self.hostsFile = '/etc/hosts'
+        self.keysFile = '/root/.ssh/authorized_keys'
         self.chameleon = enableChameleon
         self.log = logging.getLogger(LOGGER)
         self.config = None
@@ -144,6 +146,65 @@ class NEucaInstanceData(object):
             return result
         return None
 
+    def __updateHostsFile(self, newHosts):
+        """
+        Maintains the comet entries added to /etc/hosts.
+        """
+        neucaStr = ('NEuca comet modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        startStr = '### BEGIN ' + neucaStr
+        endStr = '### END ' + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.hostsFile, 'a+')
+        except:
+            self.log.error('__updateHostsFile:Unable to open ' + self.hostsFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        hostsEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = hostsEntries.index(startStr)
+            neucaEndEntry = hostsEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None :
+            existingHosts = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingHosts = hostsEntries[neucaStartEntry+1:neucaEndEntry]
+                existingHosts.sort()
+            if cmp(existingHosts, newHosts) :
+                del hostsEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateHostsFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            hostsEntries.append(startStr)
+            for line in newHosts:
+                hostsEntries.append(line)
+            hostsEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in hostsEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateHostsFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateHostsFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateHostsFile: Exception : %s' % (str(e)))
+        fd.close()
+
     def updateHostsFromComet(self):
         try:
             self.log.debug("Updating hosts locally")
@@ -161,7 +222,7 @@ class NEucaInstanceData(object):
 
             for g in groups.split(",") :
                 section = "hosts" + g
-                newHosts = ""
+                newHosts = []
                 comet = CometInterface(self.getCometHost(), None, None, None, self.log)
                 self.log.debug("Processing section " + section)
                 resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
@@ -182,26 +243,74 @@ class NEucaInstanceData(object):
                                 continue
 
                             self.log.debug("check if " + h["hostName"] + " exists")
-                            strToWrite = h["ip"] + " " + h["hostName"] + "\n"
-                            newHosts = newHosts + strToWrite
-                strComment = "#comethosts\n"
+                            newHostsEntry = h["ip"] + '\t' + h["hostName"] + '\n'
+                            newHosts.append(str(newHostsEntry))
 
-                f=open("/etc/hosts", "r")
-                lines=f.readlines()
-                f.close()
-                f=open("/etc/hosts", "w")
-                for line in lines :
-                    if line != strComment :
-                        f.write(line)
-                    else:
-                        break
-                f.write(strComment)
-                if newHosts != "" :
-                    f.write(newHosts)
-                f.close()
+                if newHosts is not None:
+                    newHosts.sort()
+                    self.__updateHostsFile(newHosts)
         except Exception as e:
             self.log.error('updateHostsFromComet: Exception was of type: %s' % (str(type(e))))
             self.log.error('updateHostsFromComet: Exception : %s' % (str(e)))
+
+    def __updateAuthorizedKeysFile(self, newKeys):
+        """
+        Maintains the comet entries added to /root/.ssh/authorized_keys.
+        """
+        neucaStr = ('NEuca comet modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        startStr = '### BEGIN ' + neucaStr
+        endStr = '### END ' + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.keysFile, 'a+')
+        except:
+            self.log.error('__updateAuthorizedKeysFile: Unable to open ' + self.keysFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        keysEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = keysEntries.index(startStr)
+            neucaEndEntry = keysEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None and neucaEndEntry is not None:
+            existingKeys = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingKeys = keysEntries[neucaStartEntry+1:neucaEndEntry]
+                existingKeys.sort()
+            if cmp(existingKeys, newKeys) :
+                del keysEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateAuthorizedKeysFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            keysEntries.append(startStr)
+            for line in newKeys:
+                keysEntries.append(line)
+            keysEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in keysEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateAuthorizedKeysFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateAuthorizedKeysFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateAuthorizedKeysFile: Exception : %s' % (str(e)))
+        fd.close()
 
     def updatePubKeysFromComet(self):
         try:
@@ -219,7 +328,7 @@ class NEucaInstanceData(object):
                 return
             for g in groups.split(",") :
                 section = "pubkeys" + g
-                newKeys = ""
+                newKeys = []
                 comet = CometInterface(self.getCometHost(), None, None, None, self.log)
                 self.log.debug("Processing section " + section)
                 resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
@@ -235,22 +344,11 @@ class NEucaInstanceData(object):
                         for k in keys:
                             if k["publicKey"] == "" :
                                 continue
-                            newKeys = newKeys + k["publicKey"]
-                strComment = "#cometkeys\n"
+                            newKeys.append(k["publicKey"])
 
-                f=open("/root/.ssh/authorized_keys", "r")
-                lines=f.readlines()
-                f.close()
-                f=open("/root/.ssh/authorized_keys", "w")
-                for line in lines :
-                    if line != strComment :
-                        f.write(line)
-                    else:
-                        break
-                f.write(strComment)
-                if newKeys != "" :
-                    f.write(newKeys)
-                f.close()
+                if newKeys is not None:
+                    newKeys.sort()
+                    self.__updateAuthorizedKeysFile(newKeys)
         except Exception as e:
             self.log.error('updatePubKeysFromComet: Exception was of type: %s' % (str(type(e))))
             self.log.error('updatePubKeysFromComet: Exception : %s' % (str(e)))
