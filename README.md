@@ -38,7 +38,7 @@ For more information visit https://geni-orca.renci.org
 ## Heat Template for creating COMET Cluster
 This heat template creates 2 CentOs7 servers and configures COMET on them. User is required to create COMET Context via the python client in order for instances.
 
-[comet_chameleon.yaml.txt](https://github.com/RENCI-NRIG/neuca-guest-tools/files/2398192/comet_chameleon.yaml.txt)
+[comet_chameleon.yaml](https://github.com/RENCI-NRIG/neuca-guest-tools/blob/br217/comet_chameleon.yaml)
 
 Alternatively below described manual procedure can be followed:
 ## Manual Installation of neuca-guest-tools
