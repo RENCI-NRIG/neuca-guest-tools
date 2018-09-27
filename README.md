@@ -40,57 +40,6 @@ This heat template creates 2 CentOs7 servers and configures COMET on them. User 
 
 [comet_chameleon.yaml](https://github.com/RENCI-NRIG/neuca-guest-tools/blob/br217/comet_chameleon.yaml)
 
-Alternatively below described manual procedure can be followed:
-## Manual Installation of neuca-guest-tools
-### Login as root to chameleon instance
-### Install neuca-guest-tool dependencies
-```
-pip install -U boto
-pip install python-daemon==2.1.2
-```
-### Fetch neuca-guest-tools code by following commands
-```
-git clone https://github.com/RENCI-NRIG/neuca-guest-tools
-cd neuca-guest-tools/neuca-py/
-git checkout br217
-```
-NOTE: Until code is merged to master, following command is needed to get the latest neuca tools
-
-### Install and Start neuca-guest-tools
-```
-python setup.py install
-python /usr/bin/neucad start -c
-```
-### Verify neuca daemon is running
-```
-ps -eaf | grep neuca
-root      11133      1  2 14:12 ?        00:00:00 python /usr/bin/neucad start
-```
-
-NOTE: neuca-guest-tools are now running on chameleon node. In order for pubkeys and etchost feature to work configure COMET for the chameleon node and update Chameleon node instance meta data.
-
-### Updating Chameleon Instance Meta Data
-Update Chameleon instance meta data from Openstack GUI to contain following parameters:
-
-slice_id=< Context ID used while creating COMET Context >
-reservation_id=<Key used while creating COMET Context, should be same for both pubkeys and etchosts context per instance>
-comethost=https://13.59.255.221:8111/,https://18.218.34.48:8111/
-slicecometreadtoken=<readToken used while creating COMET context, should be same for all Chameleon instances to be grouped>
-slicecometwritetoken=< writeToken used while creating COMET context >
-comethostsgroupread=all
-comethostsgroupwrite=all
-cometpubkeysgroupread=all
-cometpubkeysgroupwrite=all
-
-#### Update Meta Data via Nova Client
-`nova meta <instance name> set <key1=value1>`
-Note: Multiple key value pairs can be specified in a single command.
-Pre-requisite for the above command is to source Openstack Environment available from [Chameleon Dashboard](https://chi.tacc.chameleoncloud.org/dashboard/project/api_access/openrc/)
-```
-source CH-818348-openrc.sh
-nova meta kthare10 set slice_id=2bb5f982-60e8-4e3e-bf9f-08619698127a reservation_id=2c93dae4-9fb6-4d2e-bae0-b404aa06e36b comethost=https://13.59.255.221:8111/,https://18.218.34.48:8111/ slicecometreadtoken=2bb5f982 slicecometwritetoken=2bb5f981 comethostsgroupread=all comethostsgroupwrite=all cometpubkeysgroupread=all cometpubkeysgroupwrite=all
-```
-
 ## Creating COMET context for chameleon node
 Use [Python Comet Client](https://github.com/RENCI-NRIG/COMET-Client/tree/master/python-client ) to create COMET context.
 ### Create pubkeys context with value
