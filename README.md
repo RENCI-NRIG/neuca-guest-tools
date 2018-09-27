@@ -44,21 +44,28 @@ Alternatively below described manual procedure can be followed:
 ## Manual Installation of neuca-guest-tools
 ### Login as root to chameleon instance
 ### Install neuca-guest-tool dependencies
-`pip install -U boto`
-`pip install python-daemon==2.1.2`
+```
+pip install -U boto
+pip install python-daemon==2.1.2
+```
 ### Fetch neuca-guest-tools code by following commands
-`git clone https://github.com/RENCI-NRIG/neuca-guest-tools`
-`cd neuca-guest-tools/neuca-py/`
-Until code is merged to master, following command is needed to get the latest neuca tools
-`git checkout br217`
-### Install neuca-guest-tools
-`python setup.py install`
-### Start neuca-guest-tools
-`python /usr/bin/neucad start -c`
+```
+git clone https://github.com/RENCI-NRIG/neuca-guest-tools
+cd neuca-guest-tools/neuca-py/
+git checkout br217
+```
+NOTE: Until code is merged to master, following command is needed to get the latest neuca tools
+
+### Install and Start neuca-guest-tools
+```
+python setup.py install
+python /usr/bin/neucad start -c
+```
 ### Verify neuca daemon is running
-`ps -eaf | grep neuca`
-The above command should depict an output like below:
-`root      11133      1  2 14:12 ?        00:00:00 python /usr/bin/neucad start`
+```
+ps -eaf | grep neuca
+root      11133      1  2 14:12 ?        00:00:00 python /usr/bin/neucad start
+```
 
 NOTE: neuca-guest-tools are now running on chameleon node. In order for pubkeys and etchost feature to work configure COMET for the chameleon node and update Chameleon node instance meta data.
 
@@ -79,10 +86,10 @@ cometpubkeysgroupwrite=all
 `nova meta <instance name> set <key1=value1>`
 Note: Multiple key value pairs can be specified in a single command.
 Pre-requisite for the above command is to source Openstack Environment available from [Chameleon Dashboard](https://chi.tacc.chameleoncloud.org/dashboard/project/api_access/openrc/)
-
-`source CH-818348-openrc.sh`
-`nova meta kthare10 set slice_id=2bb5f982-60e8-4e3e-bf9f-08619698127a reservation_id=2c93dae4-9fb6-4d2e-bae0-b404aa06e36b comethost=https://13.59.255.221:8111/,https://18.218.34.48:8111/ slicecometreadtoken=2bb5f982 slicecometwritetoken=2bb5f981 comethostsgroupread=all comethostsgroupwrite=all cometpubkeysgroupread=all cometpubkeysgroupwrite=all`
-
+```
+source CH-818348-openrc.sh
+nova meta kthare10 set slice_id=2bb5f982-60e8-4e3e-bf9f-08619698127a reservation_id=2c93dae4-9fb6-4d2e-bae0-b404aa06e36b comethost=https://13.59.255.221:8111/,https://18.218.34.48:8111/ slicecometreadtoken=2bb5f982 slicecometwritetoken=2bb5f981 comethostsgroupread=all comethostsgroupwrite=all cometpubkeysgroupread=all cometpubkeysgroupwrite=all
+```
 
 ## Creating COMET context for chameleon node
 Use [Python Comet Client](https://github.com/RENCI-NRIG/COMET-Client/tree/master/python-client ) to create COMET context.
@@ -95,35 +102,28 @@ NOTE: Replace kthare10.novalocal with hostname of Chameleon instance
 
 ### Example Commands
 #### Hosts Context
-`curl --insecure -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{"val_":"[{\"hostName\":\"kthare11.novalocal\",\"ip\":\"\"}]"}' 'https://13.59.255.221:8111/writeScope?contextID=2bb5f982-60e8-4e3e-bf9f-08619698127a&family=hostsall&Key=2c93dae4-9fb6-4d2e-bae0-b404aa06e399&readToken=2bb5f982&writeToken=2bb5f983'  --cacert /Users/komalthareja/comet/DigiCertCA.crt --cert /Users/komalthareja/comet/inno-hn_exogeni_net.pem --key /Users/komalthareja/comet/inno-hn_exogeni_net.key`
-
-OR
-
-`python3.6 comet_client.py -o create_family -t https://13.59.255.221:8111 -i 04700364-ec9b-4958-b726-b063754a9143 -r 361a67ac -w 7b1c4d09 -f hostsall -k aa491da3-3f23-4a5a-9b9e-33f98884570b -v {"val_":"[{\"hostName\":\"kthare11.novalocal\",\"ip\":\"\"}]"} -a /Users/komalthareja/comet/DigiCertCA.crt -c /Users/komalthareja/comet/inno-hn_exogeni_net.pem -p /Users/komalthareja/comet/inno-hn_exogeni_net.key`
+`python3 comet_client.py -o create_family -c https://13.59.255.221:8111 -i ./input2.json`
 
 #### PubKeys Context
-`curl --insecure -X POST --header 'Content-Type: application/json' --header 'Accept: application/json' -d '{"val_":"[{\"publicKey\":\"\"}]"}' 'https://13.59.255.221:8111/writeScope?contextID=2bb5f982-60e8-4e3e-bf9f-08619698127a&family=pubkeysall&Key=2c93dae4-9fb6-4d2e-bae0-b404aa06e399&readToken=2bb5f982&writeToken=2bb5f983'  --cacert /Users/komalthareja/comet/DigiCertCA.crt --cert /Users/komalthareja/comet/inno-hn_exogeni_net.pem --key /Users/komalthareja/comet/inno-hn_exogeni_net.key`
-
-OR
-
-`python3.6 comet_client.py -o create_family -t https://13.59.255.221:8111 -i 04700364-ec9b-4958-b726-b063754a9143 -r 361a67ac -w 7b1c4d09 -f pubkeysall -k aa491da3-3f23-4a5a-9b9e-33f98884570b -v {"val_":"[{\"publicKey\":\"\"}]"} -a /Users/komalthareja/comet/DigiCertCA.crt -c /Users/komalthareja/comet/inno-hn_exogeni_net.pem -p /Users/komalthareja/comet/inno-hn_exogeni_net.key`
+`python3 comet_client.py -o create_family -c https://13.59.255.221:8111 -i ./input1.json`
 
 # Usage on exogeni nodes
 ## Fetch neuca-guest-tools code by following commands
-`git clone https://github.com/RENCI-NRIG/neuca-guest-tools`
-`cd neuca-guest-tools/neuca-py/`
-Until code is merged to master, following command is needed to get the latest neuca tools
-`git checkout br217`
+```
+git clone https://github.com/RENCI-NRIG/neuca-guest-tools
+cd neuca-guest-tools/neuca-py/
+git checkout br217
+```
+NOTE: Until code is merged to master, following command is needed to get the latest neuca tools
 
-
-## Install neuca-guest-tools
-`python setup.py install`
-
-Start neuca-guest-tools
-`python /usr/bin/neucad restart`
+## Install and Start neuca-guest-tools
+```
+python setup.py install
+python /usr/bin/neucad restart
+```
 
 ## Verify neuca daemon is running
-`ps -eaf | grep neuca`
-
-The above command should depict an output like below:
-`root 11133 1 2 14:12 ? 00:00:00 python /usr/bin/neucad start`
+```
+ps -eaf | grep neuca
+root 11133 1 2 14:12 ? 00:00:00 python /usr/bin/neucad start
+```
