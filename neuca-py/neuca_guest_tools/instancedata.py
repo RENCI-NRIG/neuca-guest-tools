@@ -38,6 +38,7 @@ class NEucaInstanceData(object):
     def __init__(self, enableChameleon=False):
         self.hostsFile = '/etc/hosts'
         self.keysFile = '/root/.ssh/authorized_keys'
+        self.publicKey = '/root/.ssh/id_rsa.pub'
         self.chameleon = enableChameleon
         self.log = logging.getLogger(LOGGER)
         self.config = None
@@ -376,20 +377,25 @@ class NEucaInstanceData(object):
                         continue
                     for k in keys:
                         if k["publicKey"] == "" :
-                            cmd = [
-                            "/bin/ssh-keygen", "-t", "rsa", "-N", "", "-f", "/root/.ssh/id_rsa"
-                            ]
-                            FNULL = open(os.devnull, 'w')
-                            rtncode = subprocess.call(cmd, stdout=FNULL)
+                            if os.path.exists(self.publicKey) :
+                                self.log.debug("Public Key already exists for root user")
+                                rtncode == 0
+                            else :
+                                self.log.debug("Generating key for root user")
+                                cmd = [
+                                "/bin/ssh-keygen", "-t", "rsa", "-N", "", "-f", "/root/.ssh/id_rsa"
+                                ]
+                                FNULL = open(os.devnull, 'w')
+                                rtncode = subprocess.call(cmd, stdout=FNULL)
                             if rtncode == 0:
-                                self.log.debug("Keys generated successfully for root user")
-                                f = open('/root/.ssh/id_rsa.pub', 'r')
+                                self.log.debug("Pushing public key for root user to Comet")
+                                f = open(self.publicKey, 'r')
                                 keyVal= f.read()
                                 f.close()
                                 k["publicKey"]=keyVal
+                                checker = True
                             else:
                                 self.log.error("Failed to generate keys for root user")
-                            checker = True
                     if checker :
                         val = {}
                         val["val_"] = json.dumps(keys)
