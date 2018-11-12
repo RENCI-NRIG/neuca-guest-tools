@@ -377,9 +377,10 @@ class NEucaInstanceData(object):
                         continue
                     for k in keys:
                         if k["publicKey"] == "" :
+                            rtncode = 1
                             if os.path.exists(self.publicKey) :
                                 self.log.debug("Public Key already exists for root user")
-                                rtncode == 0
+                                rtncode = 0
                             else :
                                 self.log.debug("Generating key for root user")
                                 cmd = [
