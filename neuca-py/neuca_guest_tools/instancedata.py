@@ -22,15 +22,25 @@ import ConfigParser
 import time
 import boto.utils
 import json
+import subprocess
+import logging
+import os
 
-from neuca_guest_tools import CONFIG
+from neuca_guest_tools import CONFIG, LOGGER
 from neuca_guest_tools import _ConfDir as neuca_ConfDir
 from neuca_guest_tools.util import TempFile
 from comet_common_iface import *
 
+urllib3.disable_warnings()
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class NEucaInstanceData(object):
-    def __init__(self):
+    def __init__(self, enableChameleon=False):
+        self.hostsFile = '/etc/hosts'
+        self.keysFile = '/root/.ssh/authorized_keys'
+        self.publicKey = '/root/.ssh/id_rsa.pub'
+        self.chameleon = enableChameleon
+        self.log = logging.getLogger(LOGGER)
         self.config = None
         self.publicIP = None
         self.userData = None
@@ -137,14 +147,352 @@ class NEucaInstanceData(object):
             return result
         return None
 
+    def __updateHostsFile(self, newHosts):
+        """
+        Maintains the comet entries added to /etc/hosts.
+        """
+        neucaStr = ('NEuca comet modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        startStr = '### BEGIN ' + neucaStr
+        endStr = '### END ' + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.hostsFile, 'a+')
+        except:
+            self.log.error('__updateHostsFile:Unable to open ' + self.hostsFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        hostsEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = hostsEntries.index(startStr)
+            neucaEndEntry = hostsEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None :
+            existingHosts = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingHosts = hostsEntries[neucaStartEntry+1:neucaEndEntry]
+                existingHosts.sort()
+            if cmp(existingHosts, newHosts) :
+                del hostsEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateHostsFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            hostsEntries.append(startStr)
+            for line in newHosts:
+                hostsEntries.append(line)
+            hostsEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in hostsEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateHostsFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateHostsFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateHostsFile: Exception : %s' % (str(e)))
+        fd.close()
+
+    def updateHostsFromComet(self):
+        try:
+            self.log.debug("Updating hosts locally")
+            groups = self.getUserDataField("global", "comethostsgroupread")
+            if groups is None or groups == "Not Specified":
+                return
+
+            sliceId = self.getUserDataField("global", "slice_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            rId = self.getUserDataField("global", "reservation_id")
+
+            if sliceId is None or readToken is None or writeToken is None:
+                return
+
+            for g in groups.split(",") :
+                section = "hosts" + g
+                newHosts = []
+                comet = CometInterface(self.getCometHost(), None, None, None, self.log)
+                self.log.debug("Processing section " + section)
+                resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
+
+                if resp.status_code != 200:
+                    self.log.error("Failure occured in enumerating family from comet" + section)
+                    continue
+
+                if resp.json()["value"] and resp.json()["value"]["entries"]:
+                    for e in resp.json()["value"]["entries"]:
+                        if e["key"] == rId :
+                            continue
+
+                        self.log.debug("processing " + e["key"])
+                        hosts = json.loads(json.loads(e["value"])["val_"])
+                        for h in hosts:
+                            if h["ip"] == "" :
+                                continue
+
+                            self.log.debug("check if " + h["hostName"] + " exists")
+                            newHostsEntry = h["ip"] + '\t' + h["hostName"] + '\n'
+                            newHosts.append(str(newHostsEntry))
+
+                if newHosts is not None:
+                    newHosts.sort()
+                    self.__updateHostsFile(newHosts)
+        except Exception as e:
+            self.log.error('updateHostsFromComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updateHostsFromComet: Exception : %s' % (str(e)))
+
+    def __updateAuthorizedKeysFile(self, newKeys):
+        """
+        Maintains the comet entries added to /root/.ssh/authorized_keys.
+        """
+        neucaStr = ('NEuca comet modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        startStr = '### BEGIN ' + neucaStr
+        endStr = '### END ' + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.keysFile, 'a+')
+        except:
+            self.log.error('__updateAuthorizedKeysFile: Unable to open ' + self.keysFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        keysEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = keysEntries.index(startStr)
+            neucaEndEntry = keysEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None and neucaEndEntry is not None:
+            existingKeys = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingKeys = keysEntries[neucaStartEntry+1:neucaEndEntry]
+                existingKeys.sort()
+            if cmp(existingKeys, newKeys) :
+                del keysEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateAuthorizedKeysFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            keysEntries.append(startStr)
+            for line in newKeys:
+                keysEntries.append(line)
+            keysEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in keysEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateAuthorizedKeysFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateAuthorizedKeysFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateAuthorizedKeysFile: Exception : %s' % (str(e)))
+        fd.close()
+
+    def updatePubKeysFromComet(self):
+        try:
+            self.log.debug("Updating PubKeys locally")
+            groups = self.getUserDataField("global", "cometpubkeysgroupread")
+            if groups is None or groups == "Not Specified":
+                return
+
+            sliceId = self.getUserDataField("global", "slice_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            rId = self.getUserDataField("global", "reservation_id")
+
+            if sliceId is None or readToken is None or writeToken is None:
+                return
+            for g in groups.split(",") :
+                section = "pubkeys" + g
+                newKeys = []
+                comet = CometInterface(self.getCometHost(), None, None, None, self.log)
+                self.log.debug("Processing section " + section)
+                resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
+                if resp.status_code != 200:
+                    self.log.error("Failure occured in enumerating family from comet" + section)
+                    continue
+                if resp.json()["value"] and resp.json()["value"]["entries"]:
+                    for e in resp.json()["value"]["entries"]:
+                        if e["key"] == rId :
+                            continue
+                        self.log.debug("processing " + e["key"])
+                        keys = json.loads(json.loads(e["value"])["val_"])
+                        for k in keys:
+                            if k["publicKey"] == "" :
+                                continue
+                            newKeys.append(k["publicKey"])
+
+                if newKeys is not None:
+                    newKeys.sort()
+                    self.__updateAuthorizedKeysFile(newKeys)
+        except Exception as e:
+            self.log.error('updatePubKeysFromComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updatePubKeysFromComet: Exception : %s' % (str(e)))
+
+
+    def updatePubKeysToComet(self):
+        try:
+            self.log.debug("Updating PubKeys in comet")
+            groups = self.getUserDataField("global", "cometpubkeysgroupwrite")
+            if groups is None or groups == "Not Specified":
+                return
+            sliceId = self.getUserDataField("global", "slice_id")
+            rId = self.getUserDataField("global", "reservation_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            if sliceId is not None and rId is not None and readToken is not None and writeToken is not None:
+                for g in groups.split(",") :
+                    checker = None
+                    section = "pubkeys" + g
+                    comet = CometInterface(self.getCometHost(), None, None, None, self.log)
+                    self.log.debug("Processing section " + section)
+                    keys = self.getCometData(section, readToken)
+                    if keys is None:
+                        self.log.debug("empty section " + section)
+                        continue
+                    for k in keys:
+                        if k["publicKey"] == "" :
+                            rtncode = 1
+                            if os.path.exists(self.publicKey) :
+                                self.log.debug("Public Key already exists for root user")
+                                rtncode = 0
+                            else :
+                                self.log.debug("Generating key for root user")
+                                cmd = [
+                                "/bin/ssh-keygen", "-t", "rsa", "-N", "", "-f", "/root/.ssh/id_rsa"
+                                ]
+                                FNULL = open(os.devnull, 'w')
+                                rtncode = subprocess.call(cmd, stdout=FNULL)
+                            if rtncode == 0:
+                                self.log.debug("Pushing public key for root user to Comet")
+                                f = open(self.publicKey, 'r')
+                                keyVal= f.read()
+                                f.close()
+                                k["publicKey"]=keyVal
+                                checker = True
+                            else:
+                                self.log.error("Failed to generate keys for root user")
+                    if checker :
+                        val = {}
+                        val["val_"] = json.dumps(keys)
+                        newVal = json.dumps(val)
+                        self.log.debug("Updating " + section + "=" + newVal)
+                        resp = comet.invokeRoundRobinApi('update_family', sliceId, rId, readToken, writeToken, section, json.loads(newVal))
+                        if resp.status_code != 200:
+                            self.log.error("Failure occured in updating pubkeys to comet" + section)
+                    else :
+                        self.log.debug("Nothing to update")
+        except Exception as e:
+            self.log.error('updatePubKeysToComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updatePubKeysToComet: Exception : %s' % (str(e)))
+
+    def updateHostsToComet(self):
+        try:
+            self.log.debug("Updating Hosts in comet")
+            groups = self.getUserDataField("global", "comethostsgroupwrite")
+            if groups is None or groups == "Not Specified":
+                return
+            sliceId = self.getUserDataField("global", "slice_id")
+            rId = self.getUserDataField("global", "reservation_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            hostName = self.getHostname()
+            ip = self.getPublicIP()
+            if sliceId is not None and rId is not None and readToken is not None and writeToken is not None:
+                for g in groups.split(",") :
+                    checker = None
+                    section = "hosts" + g
+                    comet = CometInterface(self.getCometHost(), None, None, None, self.log)
+                    self.log.debug("Processing section " + section)
+                    hosts = self.getCometData(section, readToken)
+                    if hosts is None:
+                        self.log.debug("empty section " + section)
+                        continue
+                    for h in hosts :
+                        self.log.debug("Processing host " + h["hostName"])
+                        self.log.debug("h[ip]=" + h["ip"] + " ip=" + ip)
+                        if h["hostName"] == hostName and h["ip"] != ip :
+                            h["ip"] = ip
+                            checker = True
+                    if checker :
+                        val = {}
+                        val["val_"] = json.dumps(hosts)
+                        newVal = json.dumps(val)
+                        self.log.debug("Updating " + section + "=" + newVal)
+                        resp = comet.invokeRoundRobinApi('update_family', sliceId, rId, readToken, writeToken, section, json.loads(newVal))
+                        if resp.status_code != 200:
+                            self.log.debug("Failure occured in updating hosts to comet" + section)
+                    else :
+                        self.log.debug("Nothing to update")
+        except Exception as e:
+            self.log.error('updateHostsToComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updateHostsToComet: Exception : %s' % (str(e)))
+
     def updateCometData(self):
         self.interfaces = self.updateInterfacesFromComet()
         self.scripts = self.updateScriptsFromComet()
         self.routes = self.updateRoutesFromComet()
         self.users = self.updateUsersFromComet()
         self.storage = self.updateStorageFromComet()
+        self.updateHostsToComet()
+        self.updatePubKeysToComet()
+        self.updatePubKeysFromComet()
+        self.updateHostsFromComet()
+
+    def updateChameleonInstanceData(self):
+        try:
+            host="http://169.254.169.254"
+            headers = {
+                'Accept': 'application/json',
+            }
+            response = requests.get((host + '/openstack/latest/meta_data.json'), headers=headers, verify=False)
+            if response.status_code == 200 :
+                self.ccMeta = response.json()
+            else :
+                self.log.error("Failed to fetch cc meta data")
+            response = requests.get((host + '/latest/meta-data/public-ipv4'), headers=headers, verify=False)
+            if response.status_code == 200 :
+                self.publicIP = response._content
+            else :
+                self.log.error("Failed to fetch cc public ip")
+        except Exception as e:
+            self.log.error('updateChameleonInstanceData: Exception : %s' % (str(e)))
 
     def updateInstanceData(self):
+        if self.chameleon :
+            self.log.debug("Running on chameleon")
+            self.updateChameleonInstanceData()
+            self.updateHostsToComet()
+            self.updatePubKeysToComet()
+            self.updatePubKeysFromComet()
+            self.updateHostsFromComet()
+            return
+
         # Local assignments, in order to shorten things.
         get_meta = boto.utils.get_instance_metadata
         get_user = boto.utils.get_instance_userdata
@@ -172,11 +520,17 @@ class NEucaInstanceData(object):
 
     def getUserDataField(self, section, field):
         try:
+            if self.chameleon :
+                if field == "host_name" :
+                    return self.ccMeta["hostname"]
+                return self.ccMeta["meta"][field]
             if section == 'global' or self.getCometHost() is None :
                 return self.config.get(section, field)
             else :
                 return self.getCometDataField(section, field)
         except ConfigParser.NoOptionError, ConfigParser.NoSectionError:
+            return None
+        except Exception:
             return None
 
     def getCometDataField(self, section, field):
@@ -197,18 +551,19 @@ class NEucaInstanceData(object):
                     return s[1]
         return None
 
-    def getCometData(self, section):
+    def getCometData(self, section, readToken=None):
         sliceId = self.getUserDataField("global", "slice_id")
         rId = self.getUserDataField("global", "reservation_id")
-        readToken = self.getUserDataField("global", "cometreadtoken")
+        if readToken is None:
+            readToken = self.getUserDataField("global", "cometreadtoken")
         if sliceId is not None and rId is not None and readToken is not None:
-            comet = CometInterface(self.getCometHost(), None, None, None)
+            comet = CometInterface(self.getCometHost(), None, None, None, self.log)
             resp = comet.invokeRoundRobinApi('get_family', sliceId, rId, readToken, None, section, None)
             if resp.status_code != 200:
-                print ("Failure occured in fetching family from comet" + section)
+                self.log.error("Failure occured in fetching family from comet" + section)
                 return None
             if resp.json()["value"].get("error") :
-                print ("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
+                self.log.error("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
                 return None
             elif resp.json()["value"] :
                 value = resp.json()["value"]["value"]
@@ -218,7 +573,7 @@ class NEucaInstanceData(object):
             else:
                 return None
         else :
-            print("sliceId/rId/readToken could not be determined")
+            self.log.error("sliceId/rId/readToken could not be determined")
             return None
 
     def getBootScript(self):
@@ -261,6 +616,8 @@ class NEucaInstanceData(object):
         return self.publicIP
 
     def getUserData(self):
+        if self.chameleon :
+            return json.dumps(self.ccMeta, indent=4)
         return self.userData
 
     def getHostname(self):
@@ -285,6 +642,8 @@ class NEucaInstanceData(object):
 
     def getCometHost(self):
         try:
+            if self.chameleon :
+                return self.ccMeta["meta"]["comethost"]
             return self.config.get("global", "comethost")
         except Exception:
             return None

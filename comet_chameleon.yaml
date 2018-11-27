@@ -1,0 +1,125 @@
+# This describes what is deployed by this template.
+description: server1 and server2 deployed with Heat on Chameleon
+
+# This defines the minimum Heat version required by this template.
+heat_template_version: 2015-10-15
+
+# The resources section defines what OpenStack resources are to be deployed and
+# how they should be configured.
+resources:
+  server1_floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: public
+
+  server1:
+    type: OS::Nova::Server
+    properties:
+      flavor: baremetal
+      image: CC-CentOS7
+      key_name: { get_param: key_name }
+      networks:
+         - network: sharednet1
+      scheduler_hints: { reservation: { get_param: reservation_id } }
+      metadata: 
+            {
+                "cometpubkeysgroupwrite": "all",
+                "slicecometwritetoken": { get_param: writeToken },
+                "cometpubkeysgroupread": "all",
+                "slice_id": { get_param: sliceId },
+                "comethostsgroupread": "all",
+                "slicecometreadtoken": { get_param: readToken },
+                "comethostsgroupwrite": "all",
+                "comethost": { get_param: cometHost },
+                "reservation_id": { get_param: server1_rId }
+        }
+      user_data: |
+        #!/bin/bash
+        pip install -U boto
+        pip install python-daemon==2.1.2
+        git clone https://github.com/RENCI-NRIG/neuca-guest-tools /root/neuca-guest-tools
+        cd /root/neuca-guest-tools/neuca-py/
+        git checkout br217
+        python setup.py install
+        python /usr/bin/neucad start -c
+
+  server1_ip_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: server1_floating_ip }
+      server_id: { get_resource: server1 }
+
+  server2_floating_ip:
+    type: OS::Nova::FloatingIP
+    properties:
+      pool: public
+
+  server2:
+    type: OS::Nova::Server
+    properties:
+      flavor: baremetal
+      image: CC-CentOS7
+      key_name: { get_param: key_name }
+      networks:
+         - network: sharednet1
+      scheduler_hints: { reservation: { get_param: reservation_id } }
+      metadata: 
+            {
+                "cometpubkeysgroupwrite": "all",
+                "slicecometwritetoken": { get_param: writeToken },
+                "cometpubkeysgroupread": "all",
+                "slice_id": { get_param: sliceId },
+                "comethostsgroupread": "all",
+                "slicecometreadtoken": { get_param: readToken },
+                "comethostsgroupwrite": "all",
+                "comethost": { get_param: cometHost },
+                "reservation_id": { get_param: server2_rId }
+        }
+      user_data: |
+        #!/bin/bash
+        pip install -U boto
+        pip install python-daemon==2.1.2
+        git clone https://github.com/RENCI-NRIG/neuca-guest-tools /root/neuca-guest-tools
+        cd /root/neuca-guest-tools/neuca-py/
+        git checkout br217
+        python setup.py install
+        python /usr/bin/neucad start -c
+
+  server2_ip_association:
+    type: OS::Nova::FloatingIPAssociation
+    properties:
+      floating_ip: { get_resource: server2_floating_ip }
+      server_id: { get_resource: server2 }
+
+# The parameters section gathers configuration from the user.
+parameters:
+  key_name:
+    type: string
+    description: Name of a KeyPair to enable SSH access to the instance
+    default: default
+    constraints:
+    - custom_constraint: nova.keypair
+  reservation_id:
+    type: string
+    description: ID of the Blazar reservation to use for launching instances.
+    constraints:
+    - custom_constraint: blazar.reservation
+  sliceId:
+    type: string
+    description: Slice Id; used as context Id for COMET
+  server1_rId :
+    type: string
+    description: Reservation Id for Server1; used as key for COMET
+  server2_rId :
+    type: string
+    description: Reservation Id for Server2; used as key for COMET
+  readToken:
+    type: string
+    description: Read Token; alphanumeric string with atleast 8 characters; used for COMET
+  writeToken:
+    type: string
+    description: Write Token; alphanumeric string with atleast 8 characters; used for COMET
+  cometHost:
+    type: string
+    description: Comet Host 
+    default : "https://13.59.255.221:8111/,https://18.218.34.48:8111/"

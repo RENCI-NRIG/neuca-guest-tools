@@ -42,7 +42,7 @@ from netaddr import IPAddress, IPNetwork, all_matching_cidrs
 
 
 # For now, let's keep customizer selection primitive.
-def get_customizer(distro):
+def get_customizer(distro, enableChameleon=False):
     customizers = {
         'debian': NEucaDebianCustomizer,
         'Ubuntu': NEucaDebianCustomizer,
@@ -50,14 +50,14 @@ def get_customizer(distro):
         'fedora': NEucaRedhatCustomizer,
         'centos': NEucaRedhatCustomizer,
     }
-    return customizers.get(distro)(distro)
+    return customizers.get(distro)(distro, enableChameleon)
 
 
 class NEucaOSCustomizer(object):
     """Generic OS customizer """
 
-    def __init__(self, distro):
-        self.instanceData = NEucaInstanceData()
+    def __init__(self, distro, enableChameleon=False):
+        self.instanceData = NEucaInstanceData(enableChameleon)
         self.log = logging.getLogger(LOGGER)
         self.ignoredMacSet = set()
         self.firstRun = True
@@ -117,8 +117,8 @@ class NEucaOSCustomizer(object):
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
     """Linux customizer """
 
-    def __init__(self, distro, iscsiInitScript):
-        super(NEucaLinuxCustomizer, self).__init__(distro)
+    def __init__(self, distro, iscsiInitScript, enableChameleon=False):
+        super(NEucaLinuxCustomizer, self).__init__(distro, enableChameleon)
         self.iscsiInitScript = iscsiInitScript
         self.storage_dir = neuca_StorageDir
         self.hostsFile = '/etc/hosts'
@@ -1299,6 +1299,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
         # Fetch the list of dataplane interfaces.
         interfaces = self.instanceData.getAllInterfaces()
+        if interfaces is None :
+            return
         systemIfaces = self.__getPhysicalIfacesByMac()
         for iface in interfaces:
             mac = iface[0]
@@ -1590,22 +1592,22 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
 
 
 class NEucaRedhatCustomizer(NEucaLinuxCustomizer):
-    def __init__(self, distro):
+    def __init__(self, distro, enableChameleon=False):
         import platform
         distro_version = int(platform.dist()[1].split('.')[0])
         if (((distro == 'fedora') and (distro_version >= 15))
                 or (((distro == 'redhat') or (distro == 'centos')) and
                     (distro_version >= 7))):
-            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsid')
+            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsid', enableChameleon)
         else:
-            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsi')
+            super(NEucaRedhatCustomizer, self).__init__(distro, 'iscsi', enableChameleon)
 
 
 class NEucaDebianCustomizer(NEucaLinuxCustomizer):
-    def __init__(self, distro):
+    def __init__(self, distro, enableChameleon=False):
         import platform
         distro_version = int(platform.dist()[1].split('.')[0])
         if ((distro == 'Ubuntu') and (distro_version >= 16)):
-            super(NEucaDebianCustomizer, self).__init__(distro, 'iscsid')
+            super(NEucaDebianCustomizer, self).__init__(distro, 'iscsid', enableChameleon)
         else:
-            super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi')
+            super(NEucaDebianCustomizer, self).__init__(distro, 'open-iscsi', enableChameleon)
