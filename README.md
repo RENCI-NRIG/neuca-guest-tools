@@ -61,7 +61,6 @@ NOTE: Replace kthare10.novalocal with hostname of Chameleon instance
 ```
 git clone https://github.com/RENCI-NRIG/neuca-guest-tools
 cd neuca-guest-tools/neuca-py/
-git checkout br217
 ```
 NOTE: Until code is merged to master, following command is needed to get the latest neuca tools
 
