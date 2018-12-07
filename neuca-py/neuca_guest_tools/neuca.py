@@ -78,9 +78,14 @@ class NEucad():
                 self.customizer.updateInstanceData()
                 if self.chameleon != True :
                     self.customizer.updateHostname()
+                    self.customizer.updateUsers()
                     self.customizer.updateNetworking()
                     self.customizer.updateStorage()
                     self.customizer.runNewScripts()
+                self.customizer.updateHostsToComet()
+                self.customizer.updatePubKeysToComet()
+                self.customizer.updatePubKeysFromComet()
+                self.customizer.updateHostsFromComet()
                 self.customizer.firstRun = False
             except KeyboardInterrupt:
                 self.log.error('Terminating on keyboard interrupt...')
