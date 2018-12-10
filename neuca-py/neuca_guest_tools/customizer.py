@@ -1546,6 +1546,7 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         except:
             old_hostname = None
 
+        new_hostname = new_hostname.replace('/','-')
         self.log.debug('new_hostname = %s, old_hostname = %s'
                        % (str(new_hostname), str(old_hostname)))
         if new_hostname != old_hostname:
