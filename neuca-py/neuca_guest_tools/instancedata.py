@@ -245,6 +245,7 @@ class NEucaInstanceData(object):
 
                             self.log.debug("check if " + h["hostName"] + " exists")
                             newHostsEntry = h["ip"] + '\t' + h["hostName"] + '\n'
+                            newHostsEntry = newHostsEntry.replace('/','-')
                             newHosts.append(str(newHostsEntry))
 
                 if newHosts is not None:
@@ -436,7 +437,7 @@ class NEucaInstanceData(object):
                     for h in hosts :
                         self.log.debug("Processing host " + h["hostName"])
                         self.log.debug("h[ip]=" + h["ip"] + " ip=" + ip)
-                        if h["hostName"] == hostName and h["ip"] != ip :
+                        if h["hostName"].replace('/','-') == hostName and h["ip"] != ip :
                             h["ip"] = ip
                             checker = True
                     if checker :
