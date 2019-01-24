@@ -24,6 +24,7 @@ import socket
 import subprocess
 import time
 import glob
+import json 
 
 from neuca_guest_tools import CONFIG, LOGGER
 from neuca_guest_tools import _IPV4_LOOPBACK_NET as loopbackNet
@@ -35,6 +36,7 @@ from neuca_guest_tools import _DataUdevPriority as default_data_udev_priority
 from neuca_guest_tools.instancedata import NEucaInstanceData
 from neuca_guest_tools.script import NeucaScript
 from neuca_guest_tools.util import Commands
+from comet_common_iface import *
 
 import logging
 
@@ -107,11 +109,27 @@ class NEucaOSCustomizer(object):
     def updateStorage(self):
         pass
 
+    def updateUsers(self):
+        pass
+
+    def updateHostsToComet(self):
+        pass
+
+    def updatePubKeysToComet(self):
+        pass
+
+    def updatePubKeysFromComet(self):
+        pass
+
+    def updateHostsFromComet(self):
+        pass
+
     def customizeNetworking(self):
         pass
 
     def runCustomScript(self):
         pass
+
 
 
 class NEucaLinuxCustomizer(NEucaOSCustomizer):
@@ -122,6 +140,14 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
         self.iscsiInitScript = iscsiInitScript
         self.storage_dir = neuca_StorageDir
         self.hostsFile = '/etc/hosts'
+        self.hostsFile = '/etc/hosts'
+        self.keysFile = '/root/.ssh/authorized_keys'
+        self.publicKey = '/root/.ssh/id_rsa.pub'
+        self.neucaPubKeysStr = ('NEuca comet pubkeys modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        self.neucaUserKeysStr = ('NEuca comet user keys modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+
         try:
             self.udevDirectory = CONFIG.get('linux',
                                             'udev-directory')
@@ -1531,6 +1557,157 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             else:
                 self.log.error('Unknown storage protocol: %s' % proto)
 
+    def __createUser(self, sudo, user):
+        self.log.debug('__createUser')
+        keyFile=None
+        try:
+            cmd = ["useradd", "-m", user]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            alreadyExists = False
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully added user: ' + user)
+            elif rtncode == 9:
+                self.log.debug('__createUser: User: ' + user + ' already exists')
+                alreadyExists = True
+            else:
+                self.log.error('__createUser: Failed to add user: ' +  user)
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            if sudo == 'yes' and alreadyExists == False:
+                sudoStr = user + ' ALL=(ALL) NOPASSWD:ALL\n' 
+                cmd = ["chmod", '644', '/etc/sudoers']
+                (rtncode,
+                data_stdout,
+                data_stderr) = Commands.run(cmd, timeout=60)
+                if rtncode == 0:
+                    self.log.debug('__createUser: Successfully changed permissions for /etc/sudoers')
+                else:
+                    self.log.error('__createUser: Failed to change permissions for /etc/sudoers')
+                    self.log.error('__createUser: Error=' + data_stdout)
+                    return None 
+                fd = open('/etc/sudoers', 'a+')
+                fd.write(sudoStr)
+                fd.close()
+                cmd = ["chmod", '444', '/etc/sudoers']
+                (rtncode,
+                data_stdout,
+                data_stderr) = Commands.run(cmd, timeout=60)
+                if rtncode == 0:
+                    self.log.debug('__createUser: Successfully changed permissions for /etc/sudoers')
+                else:
+                    self.log.error('__createUser: Failed to change permissions for /etc/sudoers')
+                    self.log.error('__createUser: Error=' + data_stdout)
+                    return None 
+            cmd = ['useradd', '-D']
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            homepath = None
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully fetched default useradd options')
+                for line in data_stdout.split('\n'):
+                    line = line.lstrip()
+                    if line.startswith('HOME'):
+                        homepath=line.split("=")[1]
+            else:
+               self.log.error('__createUser: Failed to get default useradd options')
+               self.log.error('__createUser: Error=' + data_stdout)
+               return None 
+            homepath = homepath + '/' + user
+            sshpath = homepath + '/' + '.ssh'
+            keyFile = sshpath + '/' + 'authorized_keys' 
+            if os.path.isfile(keyFile) :
+                return keyFile
+            cmd = ['mkdir', '-p', sshpath]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully created ' + sshpath + ' directory')
+            else:
+                self.log.error('__createUser: Failed to create ' + sshpath + ' directory')
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            cmd = ['chmod', '700', sshpath]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully changed permissions for ' + sshpath)
+            else:
+                self.log.error('__createUser: Failed to changed permissions for ' + sshpath)
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            cmd = ['touch', keyFile]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully touched ' + keyFile)
+            else:
+                self.log.error('__createUser: Failed to touch ' + keyFile)
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            ownership = user + ':' + user 
+            cmd = ['chown', '-R', ownership, homepath]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully change ownership for ' + keyFile)
+            else:
+                self.log.error('__createUser: Failed to change ownership for ' + keyFile)
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            cmd = ['chmod', '600', keyFile]
+            (rtncode,
+            data_stdout,
+            data_stderr) = Commands.run(cmd, timeout=60)
+            if rtncode == 0:
+                self.log.debug('__createUser: Successfully changed permissions for ' + keyFile)
+            else:
+                self.log.error('__createUser: Failed to changed permissions for ' + keyFile)
+                self.log.error('__createUser: Error=' + data_stdout)
+                return None 
+            return keyFile 
+        except Exception as e:
+            self.log.error('__createUser: Failure while creating user')
+            self.log.error('__createUser: Exception was of type: %s' % (str(type(e))))
+            self.log.error('__createUser: Exception : %s' % (str(e)))
+            return None 
+
+    def updateUsers(self):
+        self.log.debug('updateUsers')
+        try:
+            users = self.instanceData.getAllUsersJson()
+            if users is None :
+                self.log.debug('No users found') 
+            else:
+                for u in users:
+                    login = str(u["user"])
+                    sudo = str(u["sudo"])
+                    keys = u["key"]
+                    self.log.debug('User=' + login)
+                    keyFile = None
+                    if login == 'root':
+                        keyFile = self.keysFile
+                    else :
+                        keyFile = self.__createUser(sudo, login)
+                    if keyFile is not None:
+                        startStr = '### BEGIN ' + self.neucaUserKeysStr
+                        endStr = '### END ' + self.neucaUserKeysStr
+                        newKeys = []
+                        for k in keys:
+                            k = k + '\n' 
+                            newKeys.append(k)
+                        self.__updateAuthorizedKeysFile(newKeys, startStr, endStr, keyFile)
+        except Exception as e:
+            self.log.error('updateUsers: Failure while updating users')
+            self.log.error('updateUsers: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updateUsers: Exception : %s' % (str(e)))
+
     def updateHostname(self):
         self.log.debug('updateHostname')
 
@@ -1580,6 +1757,311 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                     'Specified address not in loopback range; ' +
                     'address specified was: '
                     + loopback_address)
+
+    def __updateHostsFileWithCometHosts(self, newHosts):
+        """
+        Maintains the comet entries added to /etc/hosts.
+        """
+        neucaStr = ('NEuca comet modifications - ' +
+                    'DO NOT EDIT BETWEEN THESE LINES. ###\n')
+        startStr = '### BEGIN ' + neucaStr
+        endStr = '### END ' + neucaStr
+
+        fd = None
+        try:
+            fd = open(self.hostsFile, 'a+')
+        except:
+            self.log.error('__updateHostsFile:Unable to open ' + self.hostsFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        hostsEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = hostsEntries.index(startStr)
+            neucaEndEntry = hostsEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None :
+            existingHosts = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingHosts = hostsEntries[neucaStartEntry+1:neucaEndEntry]
+                existingHosts.sort()
+            if cmp(existingHosts, newHosts) :
+                del hostsEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateHostsFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            hostsEntries.append(startStr)
+            for line in newHosts:
+                hostsEntries.append(line)
+            hostsEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in hostsEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateHostsFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateHostsFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateHostsFile: Exception : %s' % (str(e)))
+        fd.close()
+
+    def updateHostsFromComet(self):
+        try:
+            self.log.debug("Updating hosts locally")
+            groups = self.getUserDataField("global", "comethostsgroupread")
+            if groups is None or groups == "Not Specified":
+                return
+
+            sliceId = self.getUserDataField("global", "slice_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            rId = self.getUserDataField("global", "reservation_id")
+
+            if sliceId is None or readToken is None or writeToken is None:
+                return
+
+            for g in groups.split(",") :
+                section = "hosts" + g
+                newHosts = []
+                comet = CometInterface(self.instanceData.getCometHost(), None, None, None, self.log)
+                self.log.debug("Processing section " + section)
+                resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
+
+                if resp.status_code != 200:
+                    self.log.error("Failure occured in enumerating family from comet" + section)
+                    continue
+
+                if resp.json()["value"] and resp.json()["value"]["entries"]:
+                    for e in resp.json()["value"]["entries"]:
+                        if e["key"] == rId :
+                            continue
+
+                        self.log.debug("processing " + e["key"])
+                        hosts = json.loads(json.loads(e["value"])["val_"])
+                        for h in hosts:
+                            if h["ip"] == "" :
+                                continue
+
+                            self.log.debug("check if " + h["hostName"] + " exists")
+                            newHostsEntry = h["ip"] + '\t' + h["hostName"] + '\n'
+                            newHostsEntry = newHostsEntry.replace('/','-')
+                            newHosts.append(str(newHostsEntry))
+
+                if newHosts is not None:
+                    newHosts.sort()
+                    self.__updateHostsFileWithCometHosts(newHosts)
+        except Exception as e:
+            self.log.error('updateHostsFromComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updateHostsFromComet: Exception : %s' % (str(e)))
+
+    def __updateAuthorizedKeysFile(self, newKeys, startStr, endStr, keysFile):
+        """
+        Maintains the comet entries added to authorized_keys.
+        """
+
+        fd = None
+        try:
+            fd = open(keysFile, 'a+')
+        except:
+            self.log.error('__updateAuthorizedKeysFile: Unable to open ' + keysFile +
+                           ' for modifications!')
+            return
+
+        fd.seek(0)
+        keysEntries = list(fd)
+        modified = False
+
+        neucaStartEntry = None
+        neucaEndEntry = None
+        try:
+            neucaStartEntry = keysEntries.index(startStr)
+            neucaEndEntry = keysEntries.index(endStr)
+        except ValueError:
+            pass
+
+        if neucaStartEntry is not None and neucaEndEntry is not None:
+            existingKeys = []
+            if neucaStartEntry+1 != neucaEndEntry :
+                existingKeys = keysEntries[neucaStartEntry+1:neucaEndEntry]
+                existingKeys.sort()
+            if cmp(existingKeys, newKeys) :
+                del keysEntries[neucaStartEntry:neucaEndEntry+1]
+                modified = True
+            else:
+                self.log.debug("__updateAuthorizedKeysFile: Nothing to do")
+        else:
+            modified = True
+
+        if modified:
+            keysEntries.append(startStr)
+            for line in newKeys:
+                keysEntries.append(line)
+            keysEntries.append(endStr)
+            try:
+                fd.seek(0)
+                fd.truncate()
+                for line in keysEntries:
+                    fd.write(line)
+            except Exception as e:
+                self.log.error('__updateAuthorizedKeysFile: Error writing modifications to ' +
+                               self.hostsFile)
+                self.log.error('__updateAuthorizedKeysFile: Exception was of type: %s' % (str(type(e))))
+                self.log.error('__updateAuthorizedKeysFile: Exception : %s' % (str(e)))
+        fd.close()
+
+    def updatePubKeysFromComet(self):
+        try:
+            self.log.debug("Updating PubKeys locally")
+            groups = self.getUserDataField("global", "cometpubkeysgroupread")
+            if groups is None or groups == "Not Specified":
+                return
+
+            sliceId = self.getUserDataField("global", "slice_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            rId = self.getUserDataField("global", "reservation_id")
+
+            if sliceId is None or readToken is None or writeToken is None:
+                return
+            startStr = '### BEGIN ' + self.neucaPubKeysStr
+            endStr = '### END ' + self.neucaPubKeysStr 
+            for g in groups.split(",") :
+                section = "pubkeys" + g
+                newKeys = []
+                comet = CometInterface(self.instanceData.getCometHost(), None, None, None, self.log)
+                self.log.debug("Processing section " + section)
+                resp = comet.invokeRoundRobinApi('enumerate_families', sliceId, None, readToken, None, section, None)
+                if resp.status_code != 200:
+                    self.log.error("Failure occured in enumerating family from comet" + section)
+                    continue
+                if resp.json()["value"] and resp.json()["value"]["entries"]:
+                    for e in resp.json()["value"]["entries"]:
+                        if e["key"] == rId :
+                            continue
+                        self.log.debug("processing " + e["key"])
+                        keys = json.loads(json.loads(e["value"])["val_"])
+                        for k in keys:
+                            if k["publicKey"] == "" :
+                                continue
+                            newKeys.append(k["publicKey"])
+
+                if newKeys is not None:
+                    newKeys.sort()
+                    self.__updateAuthorizedKeysFile(newKeys, startStr, endStr, self.keysFile)
+        except Exception as e:
+            self.log.error('updatePubKeysFromComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updatePubKeysFromComet: Exception : %s' % (str(e)))
+
+
+    def updatePubKeysToComet(self):
+        try:
+            self.log.debug("Updating PubKeys in comet")
+            groups = self.getUserDataField("global", "cometpubkeysgroupwrite")
+            if groups is None or groups == "Not Specified":
+                return
+            sliceId = self.getUserDataField("global", "slice_id")
+            rId = self.getUserDataField("global", "reservation_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            if sliceId is not None and rId is not None and readToken is not None and writeToken is not None:
+                for g in groups.split(",") :
+                    checker = None
+                    section = "pubkeys" + g
+                    comet = CometInterface(self.instanceData.getCometHost(), None, None, None, self.log)
+                    self.log.debug("Processing section " + section)
+                    keys = self.instanceData.getCometData(section, readToken)
+                    if keys is None:
+                        self.log.debug("empty section " + section)
+                        continue
+                    for k in keys:
+                        if k["publicKey"] == "" :
+                            rtncode = 1
+                            if os.path.exists(self.publicKey) :
+                                self.log.debug("Public Key already exists for root user")
+                                rtncode = 0
+                            else :
+                                self.log.debug("Generating key for root user")
+                                cmd = [
+                                "/bin/ssh-keygen", "-t", "rsa", "-N", "", "-f", "/root/.ssh/id_rsa"
+                                ]
+                                FNULL = open(os.devnull, 'w')
+                                rtncode = subprocess.call(cmd, stdout=FNULL)
+                            if rtncode == 0:
+                                self.log.debug("Pushing public key for root user to Comet")
+                                f = open(self.publicKey, 'r')
+                                keyVal= f.read()
+                                f.close()
+                                k["publicKey"]=keyVal
+                                checker = True
+                            else:
+                                self.log.error("Failed to generate keys for root user")
+                    if checker :
+                        val = {}
+                        val["val_"] = json.dumps(keys)
+                        newVal = json.dumps(val)
+                        self.log.debug("Updating " + section + "=" + newVal)
+                        resp = comet.invokeRoundRobinApi('update_family', sliceId, rId, readToken, writeToken, section, json.loads(newVal))
+                        if resp.status_code != 200:
+                            self.log.error("Failure occured in updating pubkeys to comet" + section)
+                    else :
+                        self.log.debug("Nothing to update")
+        except Exception as e:
+            self.log.error('updatePubKeysToComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updatePubKeysToComet: Exception : %s' % (str(e)))
+
+    def updateHostsToComet(self):
+        try:
+            self.log.debug("Updating Hosts in comet")
+            groups = self.getUserDataField("global", "comethostsgroupwrite")
+            if groups is None or groups == "Not Specified":
+                return
+            sliceId = self.getUserDataField("global", "slice_id")
+            rId = self.getUserDataField("global", "reservation_id")
+            readToken = self.getUserDataField("global", "slicecometreadtoken")
+            writeToken = self.getUserDataField("global", "slicecometwritetoken")
+            hostName = self.instanceData.getHostname()
+            ip = self.getPublicIP()
+            if sliceId is not None and rId is not None and readToken is not None and writeToken is not None:
+                for g in groups.split(",") :
+                    checker = None
+                    section = "hosts" + g
+                    comet = CometInterface(self.instanceData.getCometHost(), None, None, None, self.log)
+                    self.log.debug("Processing section " + section)
+                    hosts = self.instanceData.getCometData(section, readToken)
+                    if hosts is None:
+                        self.log.debug("empty section " + section)
+                        continue
+                    for h in hosts :
+                        self.log.debug("Processing host " + h["hostName"])
+                        self.log.debug("h[ip]=" + h["ip"] + " ip=" + ip)
+                        if h["hostName"].replace('/','-') == hostName and h["ip"] != ip :
+                            h["ip"] = ip
+                            checker = True
+                    if checker :
+                        val = {}
+                        val["val_"] = json.dumps(hosts)
+                        newVal = json.dumps(val)
+                        self.log.debug("Updating " + section + "=" + newVal)
+                        resp = comet.invokeRoundRobinApi('update_family', sliceId, rId, readToken, writeToken, section, json.loads(newVal))
+                        if resp.status_code != 200:
+                            self.log.debug("Failure occured in updating hosts to comet" + section)
+                    else :
+                        self.log.debug("Nothing to update")
+        except Exception as e:
+            self.log.error('updateHostsToComet: Exception was of type: %s' % (str(type(e))))
+            self.log.error('updateHostsToComet: Exception : %s' % (str(e)))
 
     def buildIgnoredMacSet(self):
         mac_string = CONFIG.get('runtime', 'dataplane-macs-to-ignore')
