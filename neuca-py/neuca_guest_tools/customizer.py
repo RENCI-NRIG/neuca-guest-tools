@@ -1700,8 +1700,9 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         endStr = '### END ' + self.neucaUserKeysStr
                         newKeys = []
                         for k in keys:
-                            k = k + '\n' 
-                            newKeys.append(k)
+                            for sk in k.split(":"):
+                                sk = sk + '\n' 
+                                newKeys.append(sk)
                         self.__updateAuthorizedKeysFile(newKeys, startStr, endStr, keyFile)
         except Exception as e:
             self.log.error('updateUsers: Failure while updating users')
