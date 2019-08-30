@@ -1123,7 +1123,8 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
                         % macStr)
         if (
                 (neucaHeaderStart is None) or
-                (udevEntries[neucaHeaderStart + 1] != configCommentStr)
+                (udevEntries[neucaHeaderStart + 1] != configCommentStr) or
+                (udevEntries[neucaHeaderStart + 2] != udevNameEntry)
         ):
             udevEntries = []
             udevEntries.append(neucaStr)
@@ -1332,14 +1333,22 @@ class NEucaLinuxCustomizer(NEucaOSCustomizer):
             mac = iface[0]
             config = iface[1].split(':')
             state = config[0]
+            order = None
+            if len(config) == 4:
+                order = config[3]
 
             # Get the system name for the dataplane interface from
             # the system interface hash, then remove it from the
             # hash and update the udev file.
             sysName = systemIfaces.get(mac)
+            if order:
+                self.log.debug('Interface name before order ' + sysName + ' ' + order)
+                sysName = re.sub('\d+', order, sysName)
+                self.log.debug('Interface name after order ' + sysName + ' ' + order)
             updateIface = False
             if sysName:
                 del systemIfaces[mac]
+                self.log.debug('Interface name ' + sysName)
                 updateIface = self.__updateUdevFile(mac, sysName, iface[1],
                                                     self.udevDataPrio)
 

@@ -73,6 +73,9 @@ class NEucaInstanceData(object):
                     value+=":"
                     if i.get("ip") :
                         value+=str(i["ip"])
+                    if i.get("name") :
+                        value+=":"
+                        value+=str(i["name"])
                     tup=mac,value
                     result.append(tup)
                 return result
