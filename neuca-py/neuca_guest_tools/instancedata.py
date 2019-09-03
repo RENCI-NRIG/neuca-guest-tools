@@ -61,92 +61,107 @@ class NEucaInstanceData(object):
         return rtnStr
 
     def updateInterfacesFromComet(self):
-        interfaces=self.getCometData('interfaces')
-        if interfaces is not None:
-            result = []
-            for i in interfaces:
-                mac=str(i["mac"])
-                value=str(i["state"])
-                value+=":"
-                value+=str(i["ipVersion"])
-                value+=":"
-                if i.get("ip") :
-                    value+=str(i["ip"])
-                tup=mac,value
-                result.append(tup)
-            return result
+        try: 
+            interfaces=self.getCometData('interfaces')
+            if interfaces is not None:
+                result = []
+                for i in interfaces:
+                    mac=str(i["mac"])
+                    value=str(i["state"])
+                    value+=":"
+                    value+=str(i["ipVersion"])
+                    value+=":"
+                    if i.get("ip") :
+                        value+=str(i["ip"])
+                    tup=mac,value
+                    result.append(tup)
+                return result
+        except Exception as e:
+            self.log.error('updateInterfacesFromComet: Exception : %s' % (str(e)))
         return None
 
     def updateScriptsFromComet(self):
-        scripts = self.getCometData('scripts')
-        if scripts is not None :
-            result = []
-            for s in scripts:
-                scriptName=str(s["scriptName"])
-                scriptBody=str(s["scriptBody"])
-                tup=scriptName,scriptBody
-                result.append(tup)
-            return result
+        try: 
+            scripts = self.getCometData('scripts')
+            if scripts is not None :
+                result = []
+                for s in scripts:
+                    scriptName=s["scriptName"].encode('utf-8').strip()
+                    scriptBody=s["scriptBody"].encode('utf-8').strip()
+                    tup=scriptName,scriptBody
+                    result.append(tup)
+                return result
+        except Exception as e:
+            self.log.error('updateScriptsFromComet: Exception : %s' % (str(e)))
         return None
 
     def updateRoutesFromComet(self):
-        routes = self.getCometData('routes')
-        if routes is not None :
-            result = []
-            for r in routes:
-                routeNetwork=str(r["routeNetwork"])
-                routeNextHop=str(r["routeNextHop"])
-                tup = routeNetwork, routeNextHop
-                result.append(tup)
-            return result
+        try:
+            routes = self.getCometData('routes')
+            if routes is not None :
+                result = []
+                for r in routes:
+                    routeNetwork=str(r["routeNetwork"])
+                    routeNextHop=str(r["routeNextHop"])
+                    tup = routeNetwork, routeNextHop
+                    result.append(tup)
+                return result
+        except Exception as e:
+            self.log.error('updateRoutesFromComet: Exception : %s' % (str(e)))
         return None
 
     def updateStorageFromComet(self):
-        storage = self.getCometData('storage')
-        if storage is not None:
-            result = []
-            for s in storage :
-                device=str(s["device"])
-                config=str(s["storageType"])
-                config+=":"
-                config+=str(s["targetIp"])
-                config+=":"
-                config+=str(s["targetPort"])
-                config+=":"
-                config+=str(s["targetLun"])
-                config+=":"
-                config+=str(s["targetChapUser"])
-                config+=":"
-                config+=str(s["targetChapSecret"])
-                config+=":"
-                config+=str(s["targetShouldAttach"])
-                config+=":"
-                config+=str(s["fsType"])
-                config+=":"
-                config+=str(s["fsOptions"])
-                config+=":"
-                config+=str(s["fsShouldFormat"])
-                config+=":"
-                config+=str(s["fsMountPoint"])
-                tup = device, config
-                result.append(tup)
-            return result
+        try:
+            storage = self.getCometData('storage')
+            if storage is not None:
+                result = []
+                for s in storage :
+                    device=str(s["device"])
+                    config=str(s["storageType"])
+                    config+=":"
+                    config+=str(s["targetIp"])
+                    config+=":"
+                    config+=str(s["targetPort"])
+                    config+=":"
+                    config+=str(s["targetLun"])
+                    config+=":"
+                    config+=str(s["targetChapUser"])
+                    config+=":"
+                    config+=str(s["targetChapSecret"])
+                    config+=":"
+                    config+=str(s["targetShouldAttach"])
+                    config+=":"
+                    config+=str(s["fsType"])
+                    config+=":"
+                    config+=str(s["fsOptions"])
+                    config+=":"
+                    config+=str(s["fsShouldFormat"])
+                    config+=":"
+                    config+=str(s["fsMountPoint"])
+                    tup = device, config
+                    result.append(tup)
+                return result
+        except Exception as e:
+            self.log.error('updateStorageFromComet: Exception : %s' % (str(e)))
         return None
 
     def updateUsersFromComet(self):
-        users = self.getCometData('users')
-        self.usersJson = users
-        if users is not None :
-            result = []
-            for u in users :
-                login=str(u["user"])
-                sudokeys=str(u["sudo"]) + ":["
-                for k in u["key"]:
-                    sudokeys = sudokeys + k + ","
-                sudokeys = sudokeys + "]"
-                tup = login, sudokeys
-                result.append(tup)
-            return result
+        try:
+            users = self.getCometData('users')
+            self.usersJson = users
+            if users is not None :
+                result = []
+                for u in users :
+                    login=str(u["user"])
+                    sudokeys=str(u["sudo"]) + ":["
+                    for k in u["key"]:
+                        sudokeys = sudokeys + k + ","
+                    sudokeys = sudokeys + "]"
+                    tup = login, sudokeys
+                    result.append(tup)
+                return result
+        except Exception as e:
+            self.log.error('updateUsersFromComet: Exception : %s' % (str(e)))
         return None
 
     def updateCometData(self):
@@ -240,29 +255,32 @@ class NEucaInstanceData(object):
         return None
 
     def getCometData(self, section, readToken=None):
-        sliceId = self.getUserDataField("global", "slice_id")
-        rId = self.getUserDataField("global", "reservation_id")
-        if readToken is None:
-            readToken = self.getUserDataField("global", "cometreadtoken")
-        if sliceId is not None and rId is not None and readToken is not None:
-            comet = CometInterface(self.getCometHost(), None, None, None, self.log)
-            resp = comet.invokeRoundRobinApi('get_family', sliceId, rId, readToken, None, section, None)
-            if resp.status_code != 200:
-                self.log.error("Failure occured in fetching family from comet" + section)
-                return None
-            if resp.json()["value"].get("error") :
-                self.log.error("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
-                return None
-            elif resp.json()["value"] :
-                value = resp.json()["value"]["value"]
-                if value is not None :
-                    secData = json.loads(json.loads(value)["val_"])
-                    return secData
-            else:
-                return None
-        else :
-            self.log.error("sliceId/rId/readToken could not be determined")
-            return None
+        try:
+            sliceId = self.getUserDataField("global", "slice_id")
+            rId = self.getUserDataField("global", "reservation_id")
+            if readToken is None:
+                readToken = self.getUserDataField("global", "cometreadtoken")
+            if sliceId is not None and rId is not None and readToken is not None:
+                comet = CometInterface(self.getCometHost(), None, None, None, self.log)
+                resp = comet.invokeRoundRobinApi('get_family', sliceId, rId, readToken, None, section, None)
+                if resp.status_code != 200:
+                    self.log.error("Failure occured in fetching family from comet" + section)
+                    return None
+                if resp.json()["value"].get("error") :
+                    self.log.error("Error occured in fetching family from comet" + section + resp.json()["value"]["error"])
+                    return None
+                elif resp.json()["value"] :
+                    value = resp.json()["value"]["value"]
+                    if value is not None :
+                        secData = json.loads(json.loads(value)["val_"])
+                        return secData
+                else:
+                    return None
+            else :
+                self.log.error("sliceId/rId/readToken could not be determined")
+        except Exception as e:
+            self.log.error('getCometData: Exception : %s' % (str(e)))
+        return None
 
     def getBootScript(self):
         return self.getUserDataField('scripts', 'bootscript')
