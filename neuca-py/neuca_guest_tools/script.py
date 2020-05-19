@@ -48,10 +48,13 @@ class NeucaScript:
 
     def run(self):
         script = self.scriptDir + '/' + self.name
+        output = self.scriptDir + '/' + self.name + '.log'
         if (os.path.exists(script) and not self.completed):
             try:
                 self.log.info('Running: ' + script)
-                subprocess.Popen(['nohup', script])
+                with open(output,"wb") as out:
+                    subprocess.Popen(['nohup', script], stdout=out, stderr=out)
+                self.log.info('Running: ' + script + ' completed')
             except IOError:
                 pass
             self.completed = True
